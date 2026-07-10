@@ -248,7 +248,6 @@ PHP 7.4 or higher is required. PHP 8.0+ is recommended for optimal performance.
 * Session management.
 
 == Upgrade Notice ==
-
 = 1.0.1 =
 First stable release. Install now to protect your WordPress website with enterprise-level security features — completely free.
 

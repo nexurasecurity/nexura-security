@@ -1,0 +1,107 @@
+/**
+ * Nexura Security - Pro Upgrade Modal Styles
+ *
+ * Extracted from inline style to comply with WordPress enqueue guidelines.
+ */
+@keyframes nexuraModalFadeIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes nexuraPulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4); }
+    70% { box-shadow: 0 0 0 15px rgba(236, 72, 153, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(236, 72, 153, 0); }
+}
+
+@keyframes nexuraBorderSpin {
+    100% { transform: rotate(360deg); }
+}
+
+.nexura-premium-modal {
+    position: relative;
+    background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+    padding: 45px 40px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 480px;
+    text-align: center;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05) inset;
+    overflow: hidden;
+}
+
+.nexura-premium-modal::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(from 0deg, transparent 0%, transparent 40%, rgba(236, 72, 153, 0.2) 50%, transparent 60%, transparent 100%);
+    animation: nexuraBorderSpin 8s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.nexura-premium-modal-inner {
+    position: relative;
+    z-index: 1;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.95) 0%, rgba(2, 6, 23, 0.95) 100%);
+    backdrop-filter: blur(10px);
+    border-radius: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 40px 30px;
+}
+
+.nexura-premium-icon-wrap {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 25px auto;
+    background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    box-shadow: 0 10px 25px -5px rgba(236, 72, 153, 0.5);
+    animation: nexuraPulseGlow 3s infinite;
+    border: 2px solid rgba(255,255,255,0.2);
+}
+
+.nexura-premium-title {
+    color: #f8fafc;
+    font-size: 26px;
+    font-weight: 800;
+    margin: 0 0 15px 0;
+    background: linear-gradient(to right, #f8fafc, #cbd5e1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.nexura-premium-text {
+    color: #94a3b8;
+    font-size: 15px;
+    line-height: 1.6;
+    margin-bottom: 35px;
+}
+
+.nexura-premium-btn {
+    background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
+    color: white !important;
+    border: none;
+    padding: 14px 28px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
+}
+
+.nexura-premium-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(236, 72, 153, 0.5);
+}

@@ -1,0 +1,13 @@
+[
+  "eval\\s*\\(\\s*base64_decode\\s*\\(",
+  "eval\\s*\\(\\s*gzinflate\\s*\\(",
+  "eval\\s*\\(\\s*str_rot13\\s*\\(",
+  "preg_replace\\s*\\(\\s*\\\"\\/.*\\/e\\\"",
+  "assert\\s*\\(\\s*\\$_(?:POST|GET|REQUEST)\\[",
+  "passthru\\s*\\(",
+  "shell_exec\\s*\\(",
+  "system\\s*\\(\\s*\\$_",
+  "base64_decode\\s*\\(\\s*['\\\"][a-zA-Z0-9+\\/=]{50,}['\\\"]\\s*\\)",
+  "wp_vcd",
+  "file_put_contents\\s*\\(\\s*.*\\.php"
+]

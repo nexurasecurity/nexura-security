@@ -1,0 +1,25 @@
+﻿msgid ""
+msgstr ""
+"Project-Id-Version: Nexura Security 1.0.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/nexura-security\n"
+"POT-Creation-Date: 2026-06-21 16:00:00+00:00\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2026-06-21 16:00:00+00:00\n"
+"Last-Translator: Prokash sarke\n"
+"Language-Team: Portuguese <pt_BR@li.org>\n"
+"Language: pt_BR\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+msgid "Dashboard"
+msgstr "Painel"
+
+msgid "Malware Scan"
+msgstr "VerificaÃ§Ã£o de Malware"
+
+msgid "Settings"
+msgstr "ConfiguraÃ§Ãµes"
+
+msgid "Blocked IPs"
+msgstr "IPs Bloqueados"

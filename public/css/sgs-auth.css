@@ -1,0 +1,177 @@
+﻿/* Nexura Security - Professional Auth Styles */
+.nexura-auth-container {
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+    background-color: transparent;
+}
+
+.nexura-auth-box {
+    background: #ffffff;
+    width: 100%;
+    max-width: 400px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05), 0 4px 10px rgba(0, 0, 0, 0.03);
+    padding: 40px;
+    border: 1px solid #eaeaea;
+}
+
+.nexura-auth-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a1a;
+    margin: 0 0 8px;
+    text-align: center;
+}
+
+.nexura-auth-subtitle {
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 30px;
+    text-align: center;
+}
+
+.nexura-auth-group {
+    margin-bottom: 20px;
+}
+
+.nexura-auth-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.nexura-auth-group input[type="text"],
+.nexura-auth-group input[type="email"],
+.nexura-auth-group input[type="password"] {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #111;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+}
+
+.nexura-auth-group input[type="text"]:focus,
+.nexura-auth-group input[type="email"]:focus,
+.nexura-auth-group input[type="password"]:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+.nexura-auth-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    font-size: 13px;
+}
+
+.nexura-auth-remember {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.nexura-auth-remember input {
+    margin-right: 8px;
+}
+
+.nexura-auth-link {
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.nexura-auth-link:hover {
+    text-decoration: underline;
+}
+
+.nexura-auth-btn {
+    width: 100%;
+    padding: 12px;
+    background-color: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.nexura-auth-btn:hover {
+    background-color: #1d4ed8;
+}
+
+.nexura-auth-btn:active {
+    transform: translateY(1px);
+}
+
+.nexura-auth-btn:disabled {
+    background-color: #93c5fd;
+    cursor: not-allowed;
+}
+
+.nexura-loader {
+    display: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ffffff;
+    border-bottom-color: transparent;
+    border-radius: 50%;
+    animation: nexura-spin 1s linear infinite;
+    margin-left: 10px;
+}
+
+@keyframes nexura-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.nexura-auth-message {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.nexura-auth-message.nexura-error {
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}
+
+.nexura-auth-message.nexura-success {
+    background-color: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+
+.nexura-auth-notice {
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 500;
+}
+.nexura-auth-notice.nexura-success {
+    background-color: #f0fdf4;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+}
+.nexura-auth-notice.nexura-error {
+    background-color: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+}

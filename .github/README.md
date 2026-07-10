@@ -1,3 +1,0 @@
-# Nexura Security
-
-Organization profile.

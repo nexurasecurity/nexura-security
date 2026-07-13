@@ -6,6 +6,7 @@
   <img src="https://img.shields.io/badge/Tested_up_to-7.0.1-green.svg?style=for-the-badge" alt="Tested WP">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv2-blue.svg?style=for-the-badge" alt="License"></a>
   <br>
+  <a href="https://github.com/nexurasecurity/nexura-security/actions/workflows/ci.yml"><img src="https://github.com/nexurasecurity/nexura-security/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <img src="https://img.shields.io/github/stars/nexurasecurity/nexura-security?style=social" alt="Stars">
   <img src="https://img.shields.io/github/forks/nexurasecurity/nexura-security?style=social" alt="Forks">
   <img src="https://img.shields.io/github/issues/nexurasecurity/nexura-security" alt="Issues">

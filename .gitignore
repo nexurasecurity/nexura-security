@@ -1,0 +1,95 @@
+# WordPress Plugin .gitignore
+# https://github.com/github/gitignore/blob/main/WordPress.gitignore
+
+# ========================
+# OS Generated Files
+# ========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ========================
+# IDE & Editor Files
+# ========================
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
+.editorconfig
+
+# ========================
+# PHP & Composer
+# ========================
+vendor/
+composer.lock
+
+# ========================
+# Node.js & NPM
+# ========================
+node_modules/
+npm-debug.log
+yarn.lock
+package-lock.json
+.npm
+
+# ========================
+# Build & Distribution
+# ========================
+/dist/
+/build/
+*.zip
+*.tar.gz
+
+# ========================
+# WordPress Specific
+# ========================
+wp-config.php
+wp-content/uploads/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/backup-db/
+wp-content/advanced-cache.php
+wp-content/wp-cache-config.php
+
+# ========================
+# Test & Coverage
+# ========================
+.phpunit.result.cache
+phpunit.xml
+tests/
+coverage/
+.coverage/
+
+# ========================
+# Logs & Temp
+# ========================
+*.log
+*.tmp
+*.temp
+/logs/
+/tmp/
+
+# ========================
+# Security
+# ========================
+.env
+.env.local
+.env.*.local
+secrets.json
+*.pem
+*.key
+
+# ========================
+# Plugin Specific
+# ========================
+nexura-security-pro/
+/nexura-quarantine/
+/nexura-logs/

@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  php-lint:
+    name: PHP Syntax Check
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['7.4', '8.0', '8.1', '8.2', '8.3']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php-version }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          tools: php-cs-fixer
+          coverage: none
+
+      - name: Run PHP syntax check
+        run: |
+          find . -name "*.php" \
+            -not -path "./freemius/*" \
+            -not -path "./vendor/*" \
+            -not -path "./.git/*" \
+            | xargs -P 4 -I {} php -l {}
+
+  wpcs:
+    name: WordPress Coding Standards
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          tools: composer, cs2pr
+          coverage: none
+
+      - name: Install PHPCS & WordPress Coding Standards
+        run: |
+          composer global require squizlabs/php_codesniffer
+          composer global require wp-coding-standards/wpcs
+          phpcs --config-set installed_paths ~/.composer/vendor/wp-coding-standards/wpcs
+
+      - name: Run PHPCS
+        run: |
+          phpcs --standard=WordPress \
+            --extensions=php \
+            --ignore=freemius/,vendor/ \
+            --report=checkstyle \
+            -q . | cs2pr
+        continue-on-error: true
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check for hardcoded secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
+        continue-on-error: true

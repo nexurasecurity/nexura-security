@@ -1,10 +1,14 @@
 # Nexura Security
 
 <div align="center">
-  <img src="https://img.shields.io/badge/Requires_WP-5.8+-blue.svg" alt="Requires WP">
-  <img src="https://img.shields.io/badge/Requires_PHP-7.4+-blue.svg" alt="Requires PHP">
-  <img src="https://img.shields.io/badge/Tested_up_to-7.0-green.svg" alt="Tested WP">
-  <img src="https://img.shields.io/badge/License-GPLv2-blue.svg" alt="License">
+  <img src="https://img.shields.io/badge/Requires_WP-5.8+-blue.svg?style=for-the-badge" alt="Requires WP">
+  <img src="https://img.shields.io/badge/Requires_PHP-7.4+-blue.svg?style=for-the-badge" alt="Requires PHP">
+  <img src="https://img.shields.io/badge/Tested_up_to-7.0.1-green.svg?style=for-the-badge" alt="Tested WP">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv2-blue.svg?style=for-the-badge" alt="License"></a>
+  <br>
+  <img src="https://img.shields.io/github/stars/nexurasecurity/nexura-security?style=social" alt="Stars">
+  <img src="https://img.shields.io/github/forks/nexurasecurity/nexura-security?style=social" alt="Forks">
+  <img src="https://img.shields.io/github/issues/nexurasecurity/nexura-security" alt="Issues">
 </div>
 
 > **The most complete free WordPress security plugin.** Malware scanner, firewall, 2FA, brute-force protection, file integrity monitoring, and more.
@@ -73,3 +77,8 @@ For full details, please review our [Privacy Policy](https://nexurasecurity.com/
 
 ---
 *Developed by the [Nexura Security Team](https://nexurasecurity.com)*
+
+## License
+
+Nexura Security is released under the [GPL v2 or later](LICENSE) license.
+This software is provided "as is", without warranty of any kind.

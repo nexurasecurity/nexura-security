@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 WordPress.org Support Forum
+    url: https://wordpress.org/support/plugin/nexura-security
+    about: Please ask and answer questions here if it is not a bug or feature request.
+  - name: 🛡️ Security Vulnerability Reporting
+    url: mailto:security@nexurasecurity.com
+    about: Please do not open an issue for a security vulnerability. Email our security team directly.

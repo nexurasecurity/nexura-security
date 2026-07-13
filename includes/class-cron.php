@@ -30,12 +30,13 @@ class Cron {
     }
 
     public function schedule_default_crons() {
-        // Ensure daily schedules are active
+        // Ensure daily schedules are active.
+        // Note: First run is delayed by 1 hour to prevent timeout on activation.
         if ( ! wp_next_scheduled( 'NEXURA_daily_fim_check' ) ) {
-            wp_schedule_event( time(), 'daily', 'NEXURA_daily_fim_check' );
+            wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'NEXURA_daily_fim_check' );
         }
         if ( ! wp_next_scheduled( 'NEXURA_daily_gsb_check' ) ) {
-            wp_schedule_event( time(), 'daily', 'NEXURA_daily_gsb_check' );
+            wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'NEXURA_daily_gsb_check' );
         }
     }
 

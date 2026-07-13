@@ -500,6 +500,56 @@ class Scanner {
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery
             $wpdb->query( "TRUNCATE TABLE {$wpdb->prefix}NEXURA_scan_queue" );
 
+            // Send Security Alert Email if issues found (Max 1 per 24 hours)
+            if ( $issues > 0 ) {
+                $last_email_time = (int) get_option( 'NEXURA_last_virus_alert_email', 0 );
+                if ( time() - $last_email_time > 24 * 3600 ) {
+                    $admin_email = get_option( 'admin_email' );
+                    $site_url    = site_url();
+                    $logo_url    = NEXURA_PLUGIN_URL . 'admin/img/Nexura-Security_log.jpg';
+                    
+                    $subject = sprintf( '[%s] Security Alert: %d Malware Threats Detected', get_bloginfo( 'name' ), $issues );
+                    
+                    $message = '<html><body style="font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333;">';
+                    $message .= '<div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">';
+                    
+                    // Header with Logo
+                    $message .= '<div style="background-color: #0b132b; text-align: center; padding: 20px;">';
+                    $message .= '<img src="' . esc_url( $logo_url ) . '" alt="Nexura Security" style="max-height: 60px; width: auto;" />';
+                    $message .= '</div>';
+                    
+                    // Content
+                    $message .= '<div style="padding: 30px;">';
+                    $message .= '<h2 style="color: #e63946; margin-top: 0;">⚠️ Security Alert</h2>';
+                    $message .= '<p style="font-size: 16px; line-height: 1.6;">Hello,</p>';
+                    $message .= '<p style="font-size: 16px; line-height: 1.6;"><strong>Nexura Security</strong> has completed a scan on your website (<a href="' . esc_url( $site_url ) . '" style="color: #1d3557; text-decoration: none;">' . esc_html( $site_url ) . '</a>) and detected <strong style="color: #e63946;">' . intval( $issues ) . ' security issues/threats</strong>.</p>';
+                    $message .= '<p style="font-size: 16px; line-height: 1.6;">Your website is currently at risk. Please log in to your WordPress dashboard to review the threats immediately.</p>';
+                    
+                    // CTA Box
+                    $message .= '<div style="background-color: #f8f9fa; border-left: 4px solid #1d3557; padding: 15px; margin: 25px 0;">';
+                    $message .= '<p style="margin: 0; font-size: 15px; color: #555;">To automatically clean the infected files and fully secure your website, we highly recommend upgrading to <strong>Nexura Security Pro</strong>.</p>';
+                    $message .= '</div>';
+                    
+                    $message .= '<div style="text-align: center; margin-top: 30px;">';
+                    $message .= '<a href="' . esc_url( admin_url( 'admin.php?page=nexura' ) ) . '" style="background-color: #e63946; color: #ffffff; text-decoration: none; padding: 12px 25px; border-radius: 5px; font-weight: bold; display: inline-block;">View Threats & Upgrade</a>';
+                    $message .= '</div>';
+                    
+                    $message .= '</div>'; // End Content
+                    
+                    // Footer
+                    $message .= '<div style="background-color: #f1f1f1; text-align: center; padding: 15px; font-size: 12px; color: #777;">';
+                    $message .= '<p style="margin: 0;">Stay safe,<br><strong>Nexura Security Team</strong></p>';
+                    $message .= '</div>';
+                    
+                    $message .= '</div></body></html>';
+                    
+                    // Set content type to HTML
+                    $headers = array('Content-Type: text/html; charset=UTF-8');
+                    
+                    wp_mail( $admin_email, $subject, $message, $headers );
+                    update_option( 'NEXURA_last_virus_alert_email', time(), false );
+                }
+            }
 
             // Memory cleanup
             if ( function_exists( 'gc_collect_cycles' ) ) gc_collect_cycles();

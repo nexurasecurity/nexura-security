@@ -1,6 +1,8 @@
 # Nexura Security
 
 <div align="center">
+  <a href="https://wordpress.org/plugins/nexura-security/"><img src="https://img.shields.io/badge/WordPress.org-Download%20Free-blue.svg?style=for-the-badge&logo=wordpress" alt="Download on WordPress.org"></a>
+  <br><br>
   <img src="https://img.shields.io/badge/Requires_WP-5.8+-blue.svg?style=for-the-badge" alt="Requires WP">
   <img src="https://img.shields.io/badge/Requires_PHP-7.4+-blue.svg?style=for-the-badge" alt="Requires PHP">
   <img src="https://img.shields.io/badge/Tested_up_to-7.0.1-green.svg?style=for-the-badge" alt="Tested WP">
@@ -17,6 +19,8 @@
 **Nexura Security** is a complete, all-in-one WordPress security plugin that protects your website from hackers, malware, and brute-force attacks — **completely free**.
 
 Whether you run a personal blog, an online store, or a business website, Nexura Security gives you enterprise-level protection without slowing your site down.
+
+🔗 **[Download Free on WordPress.org](https://wordpress.org/plugins/nexura-security/)** | 🌐 **[nexurasecurity.com](https://nexurasecurity.com)** | 📋 **[Changelog](CHANGELOG.md)**
 
 ## ⚡ Why Choose Nexura Security?
 
@@ -55,13 +59,16 @@ Want to go further? **Nexura Security Pro** adds powerful automation and advance
 
 ## 🚀 Installation
 
+### ✅ Automatic (Recommended)
 1. Go to **Plugins → Add New** in your WordPress dashboard.
 2. Search for **"Nexura Security"**.
 3. Click **Install Now**, then click **Activate**.
 4. Navigate to the **Nexura Security** menu in your sidebar to run your first security scan.
 
-**Manual Installation:**
-1. Download the plugin zip file.
+👉 **[Install directly from WordPress.org →](https://wordpress.org/plugins/nexura-security/)**
+
+### 📦 Manual Installation
+1. Download the plugin zip file from [WordPress.org](https://wordpress.org/plugins/nexura-security/).
 2. Upload it via **Plugins → Add New → Upload Plugin**.
 3. Activate the plugin.
 

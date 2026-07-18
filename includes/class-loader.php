@@ -23,10 +23,12 @@ class Loader {
      * Load all modules.
      */
     private function init_modules() {
+        $admin = new Admin();
         if ( is_admin() ) {
-            $admin = new Admin();
             $admin->init();
         }
+        // Load admin bar notification on both frontend and backend
+        add_action( 'admin_bar_menu', [ $admin, 'add_admin_bar_notification' ], 999 );
 
         // Core engines (Always load)
         $threat_intel = new Global_Threat_Intel();

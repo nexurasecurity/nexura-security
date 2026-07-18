@@ -643,4 +643,63 @@ class Admin {
         <?php
     }
 
+    /**
+     * Adds Nexura Security notification badge to the WP Admin Bar.
+     */
+    public function add_admin_bar_notification( $wp_admin_bar ) {
+        if ( ! current_user_can( 'manage_options' ) ) {
+            return;
+        }
+
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'NEXURA_scan_results';
+        $issues_count = 0;
+
+        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            $issues_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
+        }
+
+        $icon_url = NEXURA_PLUGIN_URL . 'admin/img/icon.png';
+        $title = '<span class="ab-icon"><img src="' . esc_url( $icon_url ) . '" alt="Nexura" style="width: 20px; height: 20px; border-radius: 3px; margin-top: 6px;"></span>';
+        $title .= '<span class="ab-label">Nexura</span>';
+        
+        if ( $issues_count > 0 ) {
+            $title .= ' <span class="update-plugins count-' . esc_attr( $issues_count ) . '" style="background-color: #d63638; color: #fff; border-radius: 10px; padding: 0 6px; font-weight: 600; font-size: 11px; margin-left: 5px;"><span class="plugin-count">' . esc_html( $issues_count ) . '</span></span>';
+        } else {
+            $title .= ' <span class="update-plugins count-0" style="background-color: #00a32a; color: #fff; border-radius: 10px; padding: 0 6px; font-weight: 600; font-size: 11px; margin-left: 5px;"><span class="plugin-count">&#10003;</span></span>';
+        }
+
+        $wp_admin_bar->add_node( [
+            'id'    => 'nexura-security',
+            'title' => $title,
+            'href'  => admin_url( 'admin.php?page=nexura' ),
+            'meta'  => [
+                'title' => __( 'Nexura Security Dashboard', 'nexura-security' ),
+            ],
+        ] );
+
+        $submenu_pages = [
+            'dashboard'            => __( 'Dashboard', 'nexura-security' ),
+            'malware-scan'         => __( 'Malware Scan', 'nexura-security' ),
+            'issues-detected'      => __( 'Issues Detected', 'nexura-security' ),
+            'file-integrity'       => __( 'File Integrity', 'nexura-security' ),
+            'hardening'            => __( 'Hardening', 'nexura-security' ),
+            'google-safe-browsing' => __( 'Google Safe Browsing', 'nexura-security' ),
+            'settings'             => __( 'Settings', 'nexura-security' ),
+            'login-security'       => __( 'Login Security', 'nexura-security' ),
+            'ssl-settings'         => __( 'SSL & HTTPS', 'nexura-security' ),
+            'about'                => __( 'About', 'nexura-security' ),
+        ];
+
+        foreach ( $submenu_pages as $slug => $page_title ) {
+            $wp_admin_bar->add_node( [
+                'id'     => 'nexura-bar-' . $slug,
+                'parent' => 'nexura-security',
+                'title'  => $page_title,
+                'href'   => admin_url( 'admin.php?page=nexura-' . $slug ),
+            ] );
+        }
+    }
+
 }

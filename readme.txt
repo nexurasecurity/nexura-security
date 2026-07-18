@@ -3,7 +3,7 @@ Contributors: nexurasecurity
 Tags: security, malware scanner, firewall, two factor authentication, brute force protection, login security, wordpress security, malware removal, security hardening, waf
 Requires at least: 5.8
 Tested up to: 7.0.1
-Stable tag: 1.0.6
+Stable tag: 1.0.7
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -269,6 +269,11 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 ---
 
 == Changelog ==
+
+= 1.0.7 =
+* **New Feature:** Added a Nexura Security notifications icon to the WordPress admin bar (frontend and backend) to show active threat alerts.
+* **Enhancement:** The admin bar icon features a dropdown menu for quick access to all Nexura Security dashboard pages.
+
 
 = 1.0.6 =
 * **Enhancement:** Revamped the native WordPress dashboard widget to match the WordPress Site Health design with a dynamic security score ring.

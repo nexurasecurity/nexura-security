@@ -20,8 +20,8 @@ class Admin {
         add_action( 'admin_init', [ $this, 'run_migrations' ] );
         add_action( 'admin_menu', [ $this, 'register_menus' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
-
-
+        add_action( 'wp_dashboard_setup', [ $this, 'register_dashboard_widget' ] );
+        add_action( 'post_submitbox_start', [ $this, 'render_post_submitbox_marketing' ] );
     }
 
     /**
@@ -481,6 +481,166 @@ class Admin {
         } else {
             echo '<div class="notice notice-error"><p>View not found: ' . esc_html( $view ) . '</p></div>';
         }
+    }
+
+    /**
+     * Registers the WordPress dashboard widget.
+     */
+    public function register_dashboard_widget() {
+        wp_add_dashboard_widget(
+            'nexura_dashboard_widget',
+            __( 'Nexura Security Status', 'nexura-security' ),
+            [ $this, 'render_dashboard_widget' ]
+        );
+    }
+
+    /**
+     * Renders the content of the dashboard widget.
+     */
+    /**
+     * Renders the content of the dashboard widget.
+     */
+    public function render_dashboard_widget() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'NEXURA_scan_results';
+        
+        $total_issues = 0;
+        $high_issues = 0;
+        $medium_issues = 0;
+        $critical_issues = 0;
+        $scanned_files = (int) get_option( 'NEXURA_scan_total', 0 );
+        
+        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+            $total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+            $high_issues = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table_name} WHERE risk_score = %s", 'High' ) );
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+            $medium_issues = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table_name} WHERE risk_score = %s", 'Medium' ) );
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+            $critical_issues = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table_name} WHERE risk_score = %s", 'Critical' ) );
+        }
+        
+        $score = 100;
+        if ( $critical_issues > 0 ) $score -= min( 80, $critical_issues * 30 );
+        if ( $high_issues > 0 )     $score -= min( 50, $high_issues * 15 );
+        if ( $medium_issues > 0 )   $score -= min( 30, $medium_issues * 5 );
+        if ( $total_issues > 0 && $score >= 80 ) {
+            $score = 79;
+        }
+        $score = max( 0, $score );
+        
+        // Match WP native site health colors
+        $score_color = $score >= 80 ? '#00a32a' : ( $score >= 50 ? '#dba617' : '#d63638' );
+        $score_label = $score >= 80 ? __( 'Protected', 'nexura-security' ) : ( $score >= 50 ? __( 'Should be improved', 'nexura-security' ) : __( 'At Risk', 'nexura-security' ) );
+
+        $dasharray = 565.48;
+        $dashoffset = $dasharray - ( $score / 100 ) * $dasharray;
+        
+        $icon_url = NEXURA_PLUGIN_URL . 'admin/img/icon.png';
+        
+        ?>
+        <div class="health-stat" style="display: flex; gap: 20px; align-items: center; margin-top: 10px; padding-bottom: 20px; border-bottom: 1px solid #ccd0d4;">
+            <div class="site-health-progress-wrapper" style="text-align: center; width: 30%; flex-shrink: 0;">
+                <div class="site-health-progress" style="width: 70px; height: 70px; margin: 0 auto 10px; position: relative;">
+                    <svg width="70" height="70" viewBox="0 0 200 200" version="1.1" xmlns="http://www.w3.org/2000/svg" style="transform: rotate(-90deg);">
+                        <circle r="90" cx="100" cy="100" fill="transparent" stroke="#f0f0f1" stroke-width="15" stroke-dasharray="565.48" style="stroke-dashoffset: 0; stroke: #f0f0f1;"></circle>
+                        <circle r="90" cx="100" cy="100" fill="transparent" stroke-width="15" stroke-dasharray="565.48" style="stroke: <?php echo esc_attr( $score_color ); ?> !important; stroke-dashoffset: <?php echo esc_attr( $dashoffset ); ?>px !important; transition: stroke-dashoffset 1s ease-in-out;"></circle>
+                    </svg>
+                </div>
+                <div class="site-health-progress-label" style="font-weight: 600; color: #1e1e1e; font-size: 14px;">
+                    <?php echo esc_html( $score_label ); ?>
+                </div>
+                <div style="margin-top: 8px;">
+                    <img src="<?php echo esc_url( $icon_url ); ?>" alt="Nexura Security" style="width: 24px; height: 24px; border-radius: 4px; vertical-align: middle;">
+                </div>
+            </div>
+
+            <div class="site-health-details" style="flex: 1;">
+                <?php if ( $total_issues > 0 ) : ?>
+                    <p style="margin-top: 0; font-size: 14px; color: #3c434a;">
+                        <?php esc_html_e( 'Your site has critical security issues that should be addressed as soon as possible to improve its protection.', 'nexura-security' ); ?>
+                    </p>
+                    <p style="font-size: 14px; color: #3c434a;">
+                        <?php 
+                        printf(
+                            wp_kses_post( __( 'Take a look at the <strong>%d issues</strong> on the <a href="%s">Nexura Security</a> screen.', 'nexura-security' ) ),
+                            (int) $total_issues,
+                            esc_url( admin_url( 'admin.php?page=nexura-issues-detected' ) )
+                        );
+                        ?>
+                    </p>
+                <?php else : ?>
+                    <p style="margin-top: 0; font-size: 14px; color: #3c434a;">
+                        <?php esc_html_e( 'Your site’s security is looking good. Nexura Security is actively monitoring your website to keep it safe.', 'nexura-security' ); ?>
+                    </p>
+                    <p style="font-size: 14px; color: #3c434a;">
+                        <?php 
+                        printf(
+                            wp_kses_post( __( 'You have <strong>%s files scanned</strong> on the <a href="%s">Nexura Security</a> screen.', 'nexura-security' ) ),
+                            esc_html( number_format_i18n( $scanned_files ) ),
+                            esc_url( admin_url( 'admin.php?page=nexura' ) )
+                        );
+                        ?>
+                    </p>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <ul style="margin: 15px 0 0 0; padding: 0; list-style: none;">
+            <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f1;">
+                <span style="color: #646970; font-weight: 500;"><span class="dashicons dashicons-shield" style="font-size: 16px; width: 16px; height: 16px; line-height: 16px; vertical-align: text-top; margin-right: 5px;"></span> <?php esc_html_e( 'Security Score', 'nexura-security' ); ?></span>
+                <?php $list_score_color = $score >= 80 ? '#10b981' : ( $score >= 50 ? '#f59e0b' : '#ef4444' ); ?>
+                <span style="font-weight: 600; color: <?php echo esc_attr( $list_score_color ); ?>;"><?php echo esc_html( $score ); ?>/100</span>
+            </li>
+            
+            <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f1;">
+                <span style="color: #646970; font-weight: 500;"><span class="dashicons dashicons-bell" style="font-size: 16px; width: 16px; height: 16px; line-height: 16px; vertical-align: text-top; margin-right: 5px;"></span> <?php esc_html_e( 'Notifications', 'nexura-security' ); ?></span>
+                <span style="font-weight: 600;"><?php echo $total_issues > 0 ? '<span style="background: #ef4444; color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 11px;">' . esc_html( $total_issues ) . '</span>' : '0'; ?></span>
+            </li>
+            
+            <li style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f1;">
+                <span style="color: #646970; font-weight: 500;"><span class="dashicons dashicons-warning" style="font-size: 16px; width: 16px; height: 16px; line-height: 16px; vertical-align: text-top; margin-right: 5px;"></span> <?php esc_html_e( 'High Risk Threats', 'nexura-security' ); ?></span>
+                <?php $high_color = $high_issues > 0 ? '#ef4444' : '#10b981'; ?>
+                <span style="font-weight: 600; color: <?php echo esc_attr( $high_color ); ?>;"><?php echo esc_html( $high_issues ); ?></span>
+            </li>
+            
+            <li style="display: flex; justify-content: space-between; padding: 8px 0;">
+                <span style="color: #646970; font-weight: 500;"><span class="dashicons dashicons-analytics" style="font-size: 16px; width: 16px; height: 16px; line-height: 16px; vertical-align: text-top; margin-right: 5px;"></span> <?php esc_html_e( 'File Integrity Overview', 'nexura-security' ); ?></span>
+                <span style="font-weight: 600; color: #10b981;"><?php esc_html_e( 'Monitoring Active', 'nexura-security' ); ?></span>
+            </li>
+        </ul>
+        <?php
+    }
+
+    /**
+     * Renders Nexura Security marketing box at the top of the Publish meta box.
+     */
+    public function render_post_submitbox_marketing( $post ) {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'NEXURA_scan_results';
+        $total_issues = 0;
+        
+        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+            $total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
+        }
+
+        $icon_url = NEXURA_PLUGIN_URL . 'admin/img/icon.png';
+        
+        $health_color = $total_issues > 0 ? '#ef4444' : '#10b981';
+        $health_text  = $total_issues > 0 ? __( 'Page Health: At Risk', 'nexura-security' ) : __( 'Page Health: Excellent', 'nexura-security' );
+        $health_icon  = $total_issues > 0 ? 'dashicons-warning' : 'dashicons-shield';
+        $bg_color     = $total_issues > 0 ? '#fef2f2' : '#f0f6fc';
+        ?>
+        <div style="width: 100%;padding: 10px; margin-bottom: 10px; border-bottom: 1px solid #dcdcde; display: flex; align-items: center; gap: 10px; background: <?php echo esc_attr( $bg_color ); ?>; border-radius: 4px;">
+            <img src="<?php echo esc_url( $icon_url ); ?>" alt="Nexura Security" style="width: 24px; height: 24px; border-radius: 4px;">
+            <div style="font-size: 12px; line-height: 1.4;">
+                <strong style="color: #1e1e1e; display: block; font-size: 13px;"><?php esc_html_e( 'Protected by Nexura', 'nexura-security' ); ?></strong>
+                <span style="color: <?php echo esc_attr( $health_color ); ?>; font-weight: 500; font-size: 12px;"><span class="dashicons <?php echo esc_attr( $health_icon ); ?>" style="font-size: 14px; width: 14px; height: 14px; line-height: 14px; vertical-align: text-top;"></span> <?php echo esc_html( $health_text ); ?></span>
+            </div>
+        </div>
+        <?php
     }
 
 }

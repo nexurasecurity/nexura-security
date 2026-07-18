@@ -1349,3 +1349,21 @@ input:disabled + .nexura-slider, input:disabled + .nexura-toggle-slider {
 .nexura-summary-table tr:last-child td {
     border-bottom: none;
 }
+
+/* ==========================================================================
+   Hide Third-Party Admin Notices
+   ========================================================================== */
+/* Hide standard admin notices to keep the Nexura dashboard clean */
+#wpbody-content > .notice:not(.fs-notice):not(.nexura-notice),
+#wpbody-content > .updated:not(.fs-notice):not(.nexura-notice),
+#wpbody-content > .error:not(.fs-notice):not(.nexura-notice),
+#wpbody-content > .update-nag {
+    display: none !important;
+}
+
+/* Allow our own notices inside the Nexura wrapper */
+.nexura-wrap .notice,
+.nexura-wrap .updated,
+.nexura-wrap .error {
+    display: block !important;
+}

@@ -22,6 +22,7 @@ class Cron {
         // FIM and GSB recurring events
         add_action( 'NEXURA_daily_fim_check', [ $this, 'run_scheduled_fim' ] );
         add_action( 'NEXURA_daily_gsb_check', [ $this, 'run_scheduled_gsb' ] );
+        add_action( 'NEXURA_daily_malware_scan', [ $this, 'run_scheduled_malware_scan' ] );
 
         // The background processing event that processes batches of the queue
         add_action( 'NEXURA_process_queue', [ $this, 'process_queue_batch' ] );
@@ -37,6 +38,10 @@ class Cron {
         }
         if ( ! wp_next_scheduled( 'NEXURA_daily_gsb_check' ) ) {
             wp_schedule_event( time() + HOUR_IN_SECONDS, 'daily', 'NEXURA_daily_gsb_check' );
+        }
+        if ( ! wp_next_scheduled( 'NEXURA_daily_malware_scan' ) ) {
+            // Schedule malware scan daily, but delay the first run slightly so it doesn't run exactly with FIM
+            wp_schedule_event( time() + HOUR_IN_SECONDS + 1800, 'daily', 'NEXURA_daily_malware_scan' );
         }
     }
 
@@ -76,7 +81,62 @@ class Cron {
             if ( class_exists( '\Nexura_Security\Logger' ) ) {
                 Logger::log( 'Automated scheduled scan completed. Processed ' . $response['processed'] . ' files, found ' . $response['issues'] . ' issues.' );
             }
+            $this->send_scan_report_email( $response );
         }
+    }
+
+    /**
+     * Sends an email report after the scan is complete (Free version only).
+     */
+    private function send_scan_report_email( $response ) {
+        // Do not send if Pro is active, as Pro handles its own advanced reporting.
+        if ( function_exists( 'nexura_is_pro' ) && nexura_is_pro() ) {
+            return;
+        }
+
+        $issues = isset($response['issues']) ? intval($response['issues']) : 0;
+        $processed = isset($response['processed']) ? intval($response['processed']) : 0;
+        
+        $to = get_option( 'admin_email' );
+        $subject = '[' . get_bloginfo('name') . '] Nexura Security - Daily Scan Report';
+        
+        $message = "Hello,\n\n";
+        $message .= "Nexura Security has completed a malware scan on your website (" . get_bloginfo('name') . ").\n\n";
+        $message .= "Scan Results:\n";
+        $message .= "- Files Processed: " . $processed . "\n";
+        $message .= "- Issues Detected: " . $issues . "\n\n";
+        
+        if ( $issues > 0 ) {
+            $message .= "Action Required: Please log in to your WordPress dashboard and check the Nexura Security -> Issues Detected page to resolve these threats.\n\n";
+        } else {
+            $message .= "Great news! Your website appears to be clean.\n\n";
+        }
+        
+        $message .= "---\n";
+        $message .= "🔒 UPGRADE TO NEXURA SECURITY PRO 🔒\n";
+        $message .= "Get advanced protection including:\n";
+        $message .= "- Automatic Scheduled Scanning at Custom Intervals\n";
+        $message .= "- Real-time Active Malware Blocking\n";
+        $message .= "- Automated Vulnerability Patching\n";
+        $message .= "- Cloud Firewall (WAF) & Advanced Hardening\n";
+        $message .= "Upgrade today to keep your site fully secured!\n";
+        
+        wp_mail( $to, $subject, $message );
+    }
+
+    /**
+     * Callback to initialize the automated daily malware scan.
+     */
+    public function run_scheduled_malware_scan() {
+        // Let Pro version handle its own scheduled scans
+        if ( function_exists( 'nexura_is_pro' ) && nexura_is_pro() ) {
+            return;
+        }
+
+        $scanner = new Scanner();
+        $scanner->init_scan();
+        // Start the background processing
+        wp_schedule_single_event( time(), 'NEXURA_process_queue' );
     }
 
     /**

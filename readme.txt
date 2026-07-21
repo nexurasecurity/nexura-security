@@ -3,7 +3,7 @@ Contributors: nexurasecurity
 Tags: security, malware scanner, firewall, two factor authentication, brute force protection
 Requires at least: 5.8
 Tested up to: 7.0.1
-Stable tag: 1.0.8
+Stable tag: 1.0.9
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -269,6 +269,11 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 ---
 
 == Changelog ==
+
+= 1.0.9 =
+* **Fix:** Reduced plugin tags to comply with WordPress.org 5-tag limit.
+* **Fix:** Shortened plugin short description to comply with 150-character limit.
+* **Enhancement:** SEO and metadata improvements for WordPress.org listing.
 
 = 1.0.8 =
 * **Enhancement:** Under-the-hood stability improvements and version synchronization.

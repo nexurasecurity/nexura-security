@@ -1,6 +1,6 @@
 === Nexura Security — Malware Scanner, Firewall, 2FA & WordPress Security ===
 Contributors: nexurasecurity
-Tags: security, malware scanner, firewall, two factor authentication, brute force protection, login security, wordpress security, malware removal, security hardening, waf
+Tags: security, malware scanner, firewall, two factor authentication, brute force protection
 Requires at least: 5.8
 Tested up to: 7.0.1
 Stable tag: 1.0.8
@@ -8,7 +8,7 @@ Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-#1 Free WordPress Security Plugin — Enterprise-grade malware scanner, WAF firewall, 2FA login protection, brute force blocking, file integrity monitor & real-time security alerts. Lightweight Wordfence alternative.
+Free WordPress security plugin with malware scanner, firewall, 2FA & brute force protection. Lightweight alternative to Wordfence & Sucuri.
 
 == Description ==
 

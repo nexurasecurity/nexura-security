@@ -57,6 +57,18 @@ if ( ! defined( 'ABSPATH' ) ) {
                 </td>
             </tr>
             <tr>
+                <th scope="row"><label for="NEXURA_hide_third_party_notices"><?php esc_html_e( 'Hide Third-Party Notices', 'nexura-security' ); ?></label></th>
+                <td>
+                    <label class="nexura-switch">
+                        <input type="checkbox" id="NEXURA_hide_third_party_notices" name="NEXURA_hide_third_party_notices" value="1" <?php checked( '1', get_option( 'NEXURA_hide_third_party_notices' ) ); ?> />
+                        <span class="nexura-slider nexura-round"></span>
+                    </label>
+                    <p class="description">
+                        <?php esc_html_e( 'Hide other plugins\' update and activation notices globally across the entire WordPress admin panel.', 'nexura-security' ); ?>
+                    </p>
+                </td>
+            </tr>
+            <tr>
                 <th scope="row"><label for="NEXURA_enable_auto_heal"><?php esc_html_e( 'Auto-Heal (Crash Recovery)', 'nexura-security' ); ?></label></th>
                 <td>
                     <label class="nexura-switch">

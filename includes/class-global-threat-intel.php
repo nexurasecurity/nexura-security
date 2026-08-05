@@ -171,6 +171,9 @@ class Global_Threat_Intel {
             
             if ( $score > 90 ) {
                 // Hard Block
+                if ( class_exists( '\Nexura_Security\Attack_Logger' ) ) {
+                    \Nexura_Security\Attack_Logger::log_attack( $ip, 'Global Threat Network (Bot/Malicious IP)', 'Blocked' );
+                }
                 wp_die( '<h1>Access Denied</h1><p>Your IP address is blocked by the Nexura Global Threat Network.</p>', 'Security Block', [ 'response' => 403 ] );
             } elseif ( $score >= 50 ) {
                 // CAPTCHA Challenge

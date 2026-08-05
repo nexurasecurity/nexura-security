@@ -233,7 +233,9 @@ class Two_Factor_Auth {
                 wp_set_auth_cookie( $user->ID, true );
                 do_action( 'wp_login', $user->user_login, $user ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 
-                $redirect_to = isset( $_REQUEST['redirect_to'] ) ? esc_url_raw( wp_unslash( $_REQUEST['redirect_to'] ) ) : admin_url(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                // SECURITY FIX: Validate redirect URL is same-site to prevent Open Redirect attacks
+                $raw_redirect = isset( $_REQUEST['redirect_to'] ) ? wp_unslash( $_REQUEST['redirect_to'] ) : admin_url(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $redirect_to  = wp_validate_redirect( $raw_redirect, admin_url() );
                 wp_safe_redirect( $redirect_to );
                 exit;
             } else {

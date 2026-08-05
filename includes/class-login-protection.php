@@ -68,9 +68,12 @@ class Login_Protection {
         set_transient( 'NEXURA_login_attempts_' . $ip, $attempts, $this->lockout_duration );
 
         if ( $attempts >= $this->max_attempts ) {
-        if ( class_exists( '\Nexura_Security\Logger' ) ) {
-            Logger::log( 'Brute Force Blocked: IP ' . $ip . ' locked out after ' . $attempts . ' failed attempts.' );
-        }
+            if ( class_exists( '\Nexura_Security\Logger' ) ) {
+                Logger::log( 'Brute Force Blocked: IP ' . $ip . ' locked out after ' . $attempts . ' failed attempts.' );
+            }
+            if ( class_exists( '\Nexura_Security\Attack_Logger' ) ) {
+                \Nexura_Security\Attack_Logger::log_attack( $ip, 'Brute Force Attack', 'Locked Out' );
+            }
             if ( class_exists( '\Nexura_Security\Global_Threat_Intel' ) ) {
                 (new \Nexura_Security\Global_Threat_Intel())->report_ip( 'brute_force_login' );
             }

@@ -36,7 +36,10 @@ class DB_Backup {
         $sql_dump .= "-- Time: " . wp_date( 'Y-m-d H:i:s' ) . "\n\n";
 
         foreach ( $tables as $table ) {
-            $table_name = $table[0];
+            $raw_table = $table[0];
+            
+            // SECURITY FIX: Sanitize table name — allow only alphanumerics and underscore
+            $table_name = preg_replace( '/[^a-zA-Z0-9_]/', '', $raw_table );
             
             // Only backup core tables and our own tables to save time/space
             if ( strpos( $table_name, $wpdb->prefix ) !== 0 ) continue;

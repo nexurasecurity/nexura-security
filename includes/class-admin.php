@@ -97,6 +97,7 @@ class Admin {
         register_setting( 'NEXURA_settings_group', 'NEXURA_delete_data_on_uninstall', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_trust_badge_footer', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_pwned_check', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_hide_third_party_notices', $sanitize_args );
         // Hardening settings
         register_setting( 'NEXURA_hardening_group', 'NEXURA_disable_file_editor', $sanitize_args );
         register_setting( 'NEXURA_hardening_group', 'NEXURA_add_security_headers', $sanitize_args );
@@ -279,8 +280,20 @@ class Admin {
      * Enqueues admin CSS and JS.
      */
     public function enqueue_assets( $hook_suffix ) {
+        // Global notice removal (if switch is ON)
+        if ( get_option( 'NEXURA_hide_third_party_notices' ) === '1' ) {
+            remove_all_actions( 'admin_notices' );
+            remove_all_actions( 'all_admin_notices' );
+        }
+
         if ( strpos( $hook_suffix, 'nexura' ) === false && ! in_array( $hook_suffix, [ 'profile.php', 'user-edit.php' ], true ) ) {
             return;
+        }
+
+        // ALWAYS remove standard WordPress notices from Nexura pages
+        if ( strpos( $hook_suffix, 'nexura' ) !== false ) {
+            remove_all_actions( 'admin_notices' );
+            remove_all_actions( 'all_admin_notices' );
         }
 
         // Google Fonts - Inter (Loaded locally from admin-style.css)

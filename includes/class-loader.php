@@ -37,6 +37,8 @@ class Loader {
         if ( is_admin() ) {
             $hardening->init_hooks();
         }
+        $ghost_admin = new Ghost_Admin_Protection();
+        
         $cron = new Cron();
         $cron->init();
 

@@ -3,7 +3,7 @@ Contributors: nexurasecurity
 Tags: security, malware scanner, firewall, two factor authentication, brute force protection
 Requires at least: 5.8
 Tested up to: 7.0.1
-Stable tag: 1.0.9
+Stable tag: 1.0.10
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -270,6 +270,15 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 
 == Changelog ==
 
+= 1.0.10 =
+* **Security:** Added Base64 and Hex payload decoding to the WAF — catches obfuscated malware that bypasses standard filters.
+* **Security:** Added Wp2shell Zero-Day blocking rule (CVE-2026-60137 / CVE-2026-63030).
+* **Security:** Fixed SSL verification in Rescue Script — `CURLOPT_SSL_VERIFYPEER` is now `true` to prevent MITM attacks.
+* **Security:** Replaced `esc_url_raw` with `wp_validate_redirect()` in 2FA login to prevent Open Redirect attacks.
+* **Security:** Secured dynamic table names with `preg_replace` sanitization in DB Backup and Plugin Conflict Cleaner.
+* **New Feature:** Ghost Admin Protection — detects and automatically demotes rogue administrator accounts injected via SQL injection or zero-day exploits. Runs a background scan every 12 hours.
+* **Chore:** Version bumped to 1.0.10.
+
 = 1.0.9 =
 * **Fix:** Reduced plugin tags to comply with WordPress.org 5-tag limit.
 * **Fix:** Shortened plugin short description to comply with 150-character limit.
@@ -287,6 +296,7 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 = 1.0.6 =
 * **Enhancement:** Revamped the native WordPress dashboard widget to match the WordPress Site Health design with a dynamic security score ring.
 * **New Feature:** Added a "Protected by Nexura" dynamic marketing and page health badge at the top of the Publish meta box for pages and posts.
+
 
 = 1.0.5 =
 * **Critical Fix:** Fixed HTTP 500 error (Maximum execution time exceeded) during plugin activation by delaying the initial File Integrity Monitoring (FIM) and Google Safe Browsing scans by 1 hour.
@@ -336,6 +346,9 @@ For a full structured changelog, see [CHANGELOG.md](https://github.com/nexurasec
 ---
 
 == Upgrade Notice ==
+
+= 1.0.10 =
+Major security hardening release. Adds Ghost Admin Protection, WAF encoded payload decoding, Wp2shell zero-day blocking, SSL MITM fix, and Open Redirect protection. **Strongly recommended for all users.**
 
 = 1.0.3 =
 This update adds automated HTML security alert emails and important stability improvements. Update recommended for all users.

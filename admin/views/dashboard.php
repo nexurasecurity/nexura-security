@@ -38,6 +38,33 @@ if ( $NEXURA_score >= 80 ) {
 }
 
 $NEXURA_recent_alerts = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}NEXURA_scan_results ORDER BY id DESC LIMIT 8", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+
+// Fetch attack logs
+$NEXURA_attack_logs = [];
+$table_attack_logs = $wpdb->prefix . 'NEXURA_attack_logs';
+if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_attack_logs'" ) === $table_attack_logs ) {
+    
+    // --- SYNC PRO WAF LOGS ---
+    $upload_dir = wp_upload_dir();
+    $waf_log_file = $upload_dir['basedir'] . '/nexura-security/waf_attacks.log';
+    if ( file_exists( $waf_log_file ) && class_exists( '\Nexura_Security\Attack_Logger' ) ) {
+        $lines = file( $waf_log_file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES );
+        if ( ! empty( $lines ) ) {
+            // Empty the file immediately to prevent race conditions
+            @file_put_contents( $waf_log_file, '' );
+            foreach ( $lines as $line ) {
+                $data = json_decode( $line, true );
+                if ( ! empty( $data['ip'] ) && ! empty( $data['reason'] ) ) {
+                    \Nexura_Security\Attack_Logger::log_attack( $data['ip'], sanitize_text_field( $data['reason'] ), 'Blocked' );
+                }
+            }
+        }
+    }
+    // -------------------------
+
+    $NEXURA_attack_logs = $wpdb->get_results( "SELECT * FROM {$table_attack_logs} ORDER BY id DESC LIMIT 20", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+}
+
 $NEXURA_circumference = 2 * 3.14159 * 65;
 $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circumference;
 ?>
@@ -281,6 +308,120 @@ $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circu
             <div style="margin-bottom: 12px; display: flex; justify-content: center;"><svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#10b981;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
             <p style="font-size: 15px; font-weight: 600;">No alerts to display.</p>
             <p style="font-size: 13px;">Run your first scan to begin monitoring.</p>
+        </div>
+    <?php endif; ?>
+</div>
+
+<!-- ===== Live Traffic & Blocked Attacks Table ===== -->
+<div class="nexura-card nexura-fade-in" style="animation-delay: 0.5s;">
+    <h2><span class="nexura-card-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></span> Live Traffic & Attack Logs</h2>
+    <?php if ( ! empty( $NEXURA_attack_logs ) ) : ?>
+        <table class="nexura-alerts-table" id="nexura-attack-logs-table">
+            <thead>
+                <tr>
+                    <th>IP Address</th>
+                    <th>Country</th>
+                    <th>Attack Type</th>
+                    <th>Action Taken</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ( $NEXURA_attack_logs as $log ) : ?>
+                    <tr>
+                        <td style="font-family: monospace; font-size: 13px;">
+                            <strong><?php echo esc_html( $log['ip_address'] ); ?></strong>
+                        </td>
+                        <td class="nexura-country-cell" data-ip="<?php echo esc_attr( $log['ip_address'] ); ?>">
+                            <?php if ( $log['country'] !== 'Unknown' ) : ?>
+                                <?php echo esc_html( $log['country'] ); ?>
+                            <?php else: ?>
+                                <span style="color: var(--nexura-text-muted); font-size: 12px; font-style: italic;">Detecting...</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php
+                            $type_badge = 'warning';
+                            if ( strpos( strtolower( $log['attack_type'] ), 'malicious' ) !== false || strpos( strtolower( $log['attack_type'] ), 'bot' ) !== false ) {
+                                $type_badge = 'critical';
+                            }
+                            ?>
+                            <span class="nexura-badge <?php echo esc_attr( $type_badge ); ?>">
+                                <?php echo esc_html( $log['attack_type'] ); ?>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="nexura-badge safe">
+                                <?php echo esc_html( $log['action_taken'] ); ?>
+                            </span>
+                        </td>
+                        <td style="color: var(--nexura-text-muted); font-size: 12px;">
+                            <?php echo esc_html( wp_date( get_option('date_format') . ' ' . get_option('time_format'), strtotime( $log['timestamp'] ) ) ); ?>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <!-- Smart JavaScript for Country Detection without slowing down backend -->
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const countryCells = document.querySelectorAll('.nexura-country-cell');
+            const uniqueIps = new Set();
+            
+            countryCells.forEach(cell => {
+                const ip = cell.getAttribute('data-ip');
+                if (ip && cell.textContent.trim() === 'Detecting...') {
+                    uniqueIps.add(ip);
+                }
+            });
+
+            if (uniqueIps.size > 0) {
+                // Batch request to ip-api for better performance
+                const ipArray = Array.from(uniqueIps);
+                const reqBody = ipArray.map(ip => { return { query: ip, fields: "country,countryCode" } });
+
+                fetch('http://ip-api.com/batch', {
+                    method: 'POST',
+                    body: JSON.stringify(reqBody)
+                })
+                .then(res => res.json())
+                .then(data => {
+                    const countryMap = {};
+                    data.forEach(result => {
+                        if (result.status === 'success') {
+                            countryMap[result.query] = {
+                                name: result.country,
+                                code: result.countryCode.toLowerCase()
+                            };
+                        }
+                    });
+
+                    countryCells.forEach(cell => {
+                        const ip = cell.getAttribute('data-ip');
+                        if (countryMap[ip]) {
+                            const flagUrl = 'https://flagcdn.com/16x12/' + countryMap[ip].code + '.png';
+                            cell.innerHTML = '<img src="' + flagUrl + '" alt="' + countryMap[ip].code + '" style="margin-right: 6px; vertical-align: middle;"> ' + countryMap[ip].name;
+                        } else if (cell.textContent.trim() === 'Detecting...') {
+                            cell.innerHTML = '<span style="color: var(--nexura-text-muted);">Unknown</span>';
+                        }
+                    });
+                })
+                .catch(err => {
+                    countryCells.forEach(cell => {
+                        if (cell.textContent.trim() === 'Detecting...') {
+                            cell.innerHTML = '<span style="color: var(--nexura-text-muted);">Unknown</span>';
+                        }
+                    });
+                });
+            }
+        });
+        </script>
+    <?php else : ?>
+        <div style="text-align: center; padding: 40px 0; color: var(--nexura-text-muted);">
+            <div style="margin-bottom: 12px; display: flex; justify-content: center;"><svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#10b981;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
+            <p style="font-size: 15px; font-weight: 600;">No attacks blocked recently.</p>
+            <p style="font-size: 13px;">Your site traffic is clean.</p>
         </div>
     <?php endif; ?>
 </div>

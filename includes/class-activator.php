@@ -75,10 +75,23 @@ class Activator {
             KEY deleted_at (deleted_at)
         ) $charset_collate;";
 
+        $table_attack_logs = $wpdb->prefix . 'NEXURA_attack_logs';
+        $sql_attack_logs = "CREATE TABLE $table_attack_logs (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            ip_address varchar(45) NOT NULL,
+            country varchar(50) DEFAULT 'Unknown',
+            attack_type varchar(150) NOT NULL,
+            action_taken varchar(50) NOT NULL,
+            timestamp datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY  (id),
+            KEY ip_address (ip_address)
+        ) $charset_collate;";
+
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta( $sql );
         dbDelta( $sql_queue );
         dbDelta( $sql_recaptcha );
         dbDelta( $sql_asset_scan );
+        dbDelta( $sql_attack_logs );
     }
 }

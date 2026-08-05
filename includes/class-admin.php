@@ -114,6 +114,12 @@ class Admin {
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_waf', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_threat_intel', $sanitize_args );
         
+        // Alert System settings
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_email_alerts', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_alert_email_address', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_webhook_alerts', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_webhook_url', [ 'sanitize_callback' => 'esc_url_raw' ] );
+        
         // Login Security / reCAPTCHA Settings
         register_setting( 'NEXURA_login_security_group', 'NEXURA_2fa_roles', [ 'type' => 'array', 'sanitize_callback' => [ $this, 'sanitize_2fa_roles' ] ] );
         register_setting( 'NEXURA_login_security_group', 'NEXURA_2fa_grace_period', $sanitize_args );

@@ -77,6 +77,12 @@ class Login_Protection {
             if ( class_exists( '\Nexura_Security\Global_Threat_Intel' ) ) {
                 (new \Nexura_Security\Global_Threat_Intel())->report_ip( 'brute_force_login' );
             }
+            // Send instant security alert
+            Alert_System::send_alert(
+                'Brute Force Attack — IP Locked Out',
+                sprintf( 'IP address %s has been locked out after %d failed login attempts. Target username: "%s".', $ip, $attempts, $username ),
+                'medium'
+            );
         }
     }
 

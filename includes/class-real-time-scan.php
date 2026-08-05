@@ -195,5 +195,12 @@ class Real_Time_Scan {
         if ( class_exists( '\Nexura_Security\Logger' ) ) {
             Logger::log( 'Real-Time Scan detected malware in: ' . $source );
         }
+
+        // Send instant security alert
+        Alert_System::send_alert(
+            'Real-Time Scan: Malware Detected',
+            sprintf( 'Nexura Security detected %d malicious pattern(s) in: %s. This was caught by the real-time file monitor.', count( $findings ), $source ),
+            'high'
+        );
     }
 }

@@ -551,6 +551,15 @@ class Scanner {
                 }
             }
 
+            // Also dispatch via the Alert System (supports webhooks + custom emails)
+            if ( $issues > 0 ) {
+                Alert_System::send_alert(
+                    'Malware Scan Complete — Threats Detected',
+                    sprintf( '%d security threats were detected during a malware scan on %s. Please review and clean immediately.', $issues, site_url() ),
+                    'high'
+                );
+            }
+
             // Memory cleanup
             if ( function_exists( 'gc_collect_cycles' ) ) gc_collect_cycles();
 

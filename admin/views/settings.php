@@ -169,7 +169,48 @@ if ( ! defined( 'ABSPATH' ) ) {
             <!-- Geo-Blocking Section -->
             <?php do_action('nexura_settings_pro_geo_blocking'); ?>
             
-            <!-- .htaccess Hardening Section -->
+            <!-- Alert Notifications Section -->
+            <tr>
+                <th scope="row"><?php esc_html_e( 'Alert Notifications', 'nexura-security' ); ?></th>
+                <td>
+                    <fieldset>
+                        <p class="description" style="margin-bottom: 12px;">
+                            <?php esc_html_e( 'Get instant notifications when security events occur on your site.', 'nexura-security' ); ?>
+                        </p>
+                        
+                        <!-- Email Alert Toggle -->
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <label class="nexura-switch" style="margin: 0;">
+                                <input type="checkbox" id="NEXURA_enable_email_alerts" name="NEXURA_enable_email_alerts" value="1" <?php checked( '1', get_option( 'NEXURA_enable_email_alerts' ) ); ?> />
+                                <span class="nexura-slider nexura-round"></span>
+                            </label>
+                            <span><?php esc_html_e( 'Enable Email Alerts', 'nexura-security' ); ?></span>
+                        </div>
+                        <div style="margin-left: 0; margin-bottom: 16px;">
+                            <input type="text" id="NEXURA_alert_email_address" name="NEXURA_alert_email_address" value="<?php echo esc_attr( get_option( 'NEXURA_alert_email_address' ) ); ?>" class="regular-text" placeholder="<?php echo esc_attr( get_option( 'admin_email' ) ); ?>" />
+                            <p class="description">
+                                <?php esc_html_e( 'Enter email addresses (comma-separated for multiple). Leave blank to use the default WordPress admin email.', 'nexura-security' ); ?>
+                            </p>
+                        </div>
+                        
+                        <!-- Webhook Alert Toggle -->
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <label class="nexura-switch" style="margin: 0;">
+                                <input type="checkbox" id="NEXURA_enable_webhook_alerts" name="NEXURA_enable_webhook_alerts" value="1" <?php checked( '1', get_option( 'NEXURA_enable_webhook_alerts' ) ); ?> />
+                                <span class="nexura-slider nexura-round"></span>
+                            </label>
+                            <span><?php esc_html_e( 'Enable Webhook Alerts (Slack / Discord)', 'nexura-security' ); ?></span>
+                        </div>
+                        <div style="margin-left: 0; margin-bottom: 8px;">
+                            <input type="url" id="NEXURA_webhook_url" name="NEXURA_webhook_url" value="<?php echo esc_attr( get_option( 'NEXURA_webhook_url' ) ); ?>" class="regular-text" placeholder="https://hooks.slack.com/services/..." />
+                            <p class="description">
+                                <?php esc_html_e( 'Enter your Slack or Discord Incoming Webhook URL. Alerts will be sent as formatted messages.', 'nexura-security' ); ?>
+                            </p>
+                        </div>
+                    </fieldset>
+                </td>
+            </tr>
+            
             <tr>
                 <th scope="row"><?php esc_html_e( 'Hardening & .htaccess Rules', 'nexura-security' ); ?></th>
                 <td>

@@ -43,6 +43,12 @@ class Ghost_Admin_Protection {
                 if ( class_exists( '\Nexura_Security\Attack_Logger' ) ) {
                     \Nexura_Security\Attack_Logger::log_attack( 'Localhost/DB', 'Ghost Admin Blocked (' . $user->user_login . ')', 'Demoted to Subscriber' );
                 }
+                // Send instant security alert
+                Alert_System::send_alert(
+                    'Ghost Admin Detected & Blocked',
+                    sprintf( 'A rogue administrator account "%s" (ID: %d) was detected and automatically demoted to Subscriber. This may indicate a SQL injection or zero-day exploit attempt.', $user->user_login, $user_id ),
+                    'critical'
+                );
             }
         } else {
             // An actual admin created this user, so it's safe. Add to whitelist.
@@ -87,6 +93,12 @@ class Ghost_Admin_Protection {
                     if ( class_exists( '\Nexura_Security\Attack_Logger' ) ) {
                         \Nexura_Security\Attack_Logger::log_attack( 'Database', 'Ghost Admin DB Scan (' . $user->user_login . ')', 'Demoted to Subscriber' );
                     }
+                    // Send instant security alert
+                    Alert_System::send_alert(
+                        'Ghost Admin Detected in Database Scan',
+                        sprintf( 'An unknown administrator account "%s" (ID: %d) was found during the scheduled ghost admin scan and has been demoted to Subscriber.', $user->user_login, $admin_id ),
+                        'critical'
+                    );
                 }
             }
         }

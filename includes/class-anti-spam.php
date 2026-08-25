@@ -147,6 +147,7 @@ class Anti_Spam {
         $is_valid = false;
 
         if ( $type === 'turnstile' && isset( $_POST['cf-turnstile-response'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+            // phpcs:ignore PluginCheck.CodeAnalysis.Offloading.OffloadedContent
             $response = wp_remote_post( 'https://challenges.cloudflare.com/turnstile/v0/siteverify', [
                 'body' => [
                     'secret'   => $secret,

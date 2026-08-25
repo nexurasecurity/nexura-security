@@ -24,13 +24,12 @@ class Hardening {
             add_filter( 'map_meta_cap', [ $this, 'NEXURA_disable_file_editor_caps' ], 10, 2 );
         }
 
-        // Add security headers
-        if ( $this->is_rule_enabled( 'NEXURA_add_security_headers' ) ) {
-            add_action( 'send_headers', [ $this, 'NEXURA_add_security_headers' ] );
-        }
 
-        // API Hardening (Always applied for enterprise security)
-        add_filter( 'xmlrpc_enabled', '__return_false' );
+
+        // API Hardening
+        if ( get_option( 'NEXURA_disable_xmlrpc', '0' ) === '1' ) {
+            add_filter( 'xmlrpc_enabled', '__return_false' );
+        }
         add_filter( 'rest_authentication_errors', [ $this, 'restrict_rest_api' ] );
     }
 
@@ -77,17 +76,6 @@ class Hardening {
         return (bool) get_option( $rule_key, false );
     }
 
-    /**
-     * Adds HTTP security headers.
-     */
-    public function NEXURA_add_security_headers() {
-        if ( ! headers_sent() ) {
-            header( 'X-Content-Type-Options: nosniff' );
-            header( 'X-Frame-Options: SAMEORIGIN' );
-            header( 'X-XSS-Protection: 1; mode=block' );
-            header( 'Strict-Transport-Security: max-age=31536000; includeSubDomains' );
-        }
-    }
 
     /**
      * Initializes hooks for .htaccess rules rebuilding.

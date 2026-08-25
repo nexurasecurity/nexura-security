@@ -98,7 +98,7 @@ $otpauth_url = 'otpauth://totp/' . $site_name . ':' . $user_login . '?secret=' .
                     <p class="description" style="color: var(--nexura-text-secondary);"><?php esc_html_e( 'Use one of these 5 codes to log in if you lose access to your authenticator device. Each one may be used only once.', 'nexura-security' ); ?></p>
                     
                     <div id="nexura-recovery-codes-display" style="font-family: monospace; background: var(--nexura-bg-primary); padding: 15px; border: 1px solid var(--nexura-border); border-radius: 4px; margin: 15px 0; text-align: center; line-height: 1.8; color: var(--nexura-text-primary);">
-                        <!-- Generated via JS -->
+                        <!-- Filled by JS on activation -->
                     </div>
 
                     <div style="text-align: center;">
@@ -111,9 +111,53 @@ $otpauth_url = 'otpauth://totp/' . $site_name . ':' . $user_login . '?secret=' .
                         <button type="button" onclick="location.reload();" class="button button-primary"><?php esc_html_e( 'Done', 'nexura-security' ); ?></button>
                     </div>
                 </div>
-
+                
+                <?php 
+                if ( $is_enabled === '1' ) {
+                    $recovery_codes = get_user_meta( $current_user->ID, 'NEXURA_2fa_recovery_codes', true );
+                    $remaining = is_array( $recovery_codes ) ? count( $recovery_codes ) : 0;
+                    ?>
+                    <div style="margin-top: 30px; background: rgba(99, 102, 241, 0.05); padding: 20px; border-radius: 4px; border: 1px solid rgba(99, 102, 241, 0.15);">
+                        <h3 style="margin-top: 0; display: flex; align-items: center; justify-content: space-between;">
+                            <span style="display: flex; align-items: center; gap: 5px;">
+                                <svg width="20" height="20" fill="none" stroke="#6366f1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                                <?php esc_html_e( 'Backup Recovery Codes', 'nexura-security' ); ?>
+                            </span>
+                            <span style="font-size: 12px; font-weight: normal; background: var(--nexura-bg-primary); padding: 4px 8px; border-radius: 12px; border: 1px solid var(--nexura-border);"><?php echo (int) $remaining; ?> <?php esc_html_e( 'remaining', 'nexura-security' ); ?></span>
+                        </h3>
+                        <p style="margin-bottom: 15px; color: var(--nexura-text-secondary);">
+                            <?php esc_html_e( 'Recovery codes allow you to access your account if you lose your authenticator device. Each code can only be used once.', 'nexura-security' ); ?>
+                        </p>
+                        
+                        <form method="post" action="">
+                            <?php wp_nonce_field( 'NEXURA_regenerate_recovery_codes' ); ?>
+                            <input type="hidden" name="NEXURA_2fa_action" value="regenerate_codes">
+                            <button type="submit" class="button button-secondary" onclick="return confirm('<?php esc_attr_e( 'Are you sure? This will invalidate all existing recovery codes and generate a new set of 5 codes.', 'nexura-security' ); ?>');">
+                                <?php esc_html_e( 'Generate New Recovery Codes', 'nexura-security' ); ?>
+                            </button>
+                        </form>
+                        
+                        <?php if ( isset( $_POST['NEXURA_2fa_action'] ) && $_POST['NEXURA_2fa_action'] === 'regenerate_codes' && check_admin_referer( 'NEXURA_regenerate_recovery_codes' ) ) : 
+                            $new_codes = $two_factor->generate_recovery_codes();
+                            $two_factor->save_recovery_codes( $current_user->ID, $new_codes );
+                        ?>
+                            <div style="margin-top: 20px; background: var(--nexura-bg-primary); padding: 15px; border: 1px solid var(--nexura-border); border-radius: 4px; text-align: center;">
+                                <h4 style="margin-top:0; color: #10b981;"><?php esc_html_e( 'New Codes Generated!', 'nexura-security' ); ?></h4>
+                                <p style="font-family: monospace; font-size: 14px; line-height: 2; margin-bottom: 0;">
+                                    <?php foreach ( $new_codes as $code ) {
+                                        echo esc_html( $code ) . '<br>';
+                                    } ?>
+                                </p>
+                                <p style="font-size: 12px; color: var(--nexura-text-muted); margin-bottom: 0; margin-top: 10px;">
+                                    <?php esc_html_e( 'Please save these codes now. They will not be shown again.', 'nexura-security' ); ?>
+                                </p>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                    <?php
+                }
+                ?>
             </div>
-
         </div>
     <?php endif; ?>
 </div>

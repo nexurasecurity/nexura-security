@@ -5,7 +5,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 // phpcs:ignoreFile WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
 ?>
 <form method="post" action="options.php">
+    <?php if ( isset( $_GET['imported'] ) && $_GET['imported'] == 'true' ) : ?>
+        <div class="notice notice-success is-dismissible" style="margin-left: 0;">
+            <p><strong><?php esc_html_e( 'Settings imported successfully!', 'nexura-security' ); ?></strong></p>
+        </div>
+    <?php endif; ?>
     <?php settings_fields( 'NEXURA_settings_group' ); ?>
+    <?php settings_errors( 'NEXURA_settings_group' ); ?>
     <?php
     /**
      * Hook for Pro add-ons to inject UI at the top of the settings page.
@@ -65,6 +71,19 @@ if ( ! defined( 'ABSPATH' ) ) {
                     </label>
                     <p class="description">
                         <?php esc_html_e( 'Hide other plugins\' update and activation notices globally across the entire WordPress admin panel.', 'nexura-security' ); ?>
+                    </p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="NEXURA_enable_magic_link"><?php esc_html_e( 'Enable Magic Link', 'nexura-security' ); ?></label></th>
+                <td>
+                    <label class="nexura-switch">
+                        <input type="hidden" name="NEXURA_enable_magic_link" value="0">
+                        <input type="checkbox" id="NEXURA_enable_magic_link" name="NEXURA_enable_magic_link" value="1" <?php checked( '1', get_option( 'NEXURA_enable_magic_link', '1' ) ); ?> />
+                        <span class="nexura-slider nexura-round"></span>
+                    </label>
+                    <p class="description">
+                        <?php esc_html_e( 'If enabled, users can log in via an email link without needing a password. The button will appear on the default WordPress login page.', 'nexura-security' ); ?>
                     </p>
                 </td>
             </tr>
@@ -132,6 +151,16 @@ if ( ! defined( 'ABSPATH' ) ) {
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                             <label class="nexura-switch" style="margin: 0;">
+                                <input type="checkbox" name="NEXURA_enable_smart_scan" value="1" <?php checked( get_option('NEXURA_enable_smart_scan', 1), 1 ); ?> />
+                                <span class="nexura-slider"></span>
+                            </label>
+                            <span>
+                                <?php esc_html_e( 'Enable Smart Scan (Delta)', 'nexura-security' ); ?>
+                                <br><small style="color: var(--nexura-text-muted);"><?php esc_html_e( 'After the first full scan, only scan files that have been modified (Saves up to 90% CPU usage).', 'nexura-security' ); ?></small>
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+                            <label class="nexura-switch" style="margin: 0;">
                                 <input type="checkbox" name="NEXURA_scan_themes" value="1" <?php checked( get_option('NEXURA_scan_themes', 1), 1 ); ?> />
                                 <span class="nexura-slider"></span>
                             </label>
@@ -166,9 +195,45 @@ if ( ! defined( 'ABSPATH' ) ) {
             </tr>
             
             
-            <!-- Geo-Blocking Section -->
-            <?php do_action('nexura_settings_pro_geo_blocking'); ?>
-            
+            <!-- Geo-Blocking Section (Pro Upsell) -->
+            <?php if ( ! nexura_is_pro() ) : ?>
+            <tr>
+                <th scope="row"><?php esc_html_e( 'Geo-Blocking (Blocked Countries)', 'nexura-security' ); ?> <svg width="15" height="15" viewBox="0 0 24 24" fill="#ec4899" xmlns="http://www.w3.org/2000/svg" style="vertical-align:-2px;"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg></th>
+                <td>
+                    <div style="position: relative; overflow: hidden; background: rgba(15, 23, 42, 0.4); border: 1px solid var(--nexura-border); border-radius: 6px; padding: 15px; min-height: 170px;">
+                        <!-- Blur Overlay -->
+                        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; backdrop-filter: blur(4px); background: rgba(15, 23, 42, 0.6); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10;">
+                            <h4 style="color: #f3f4f6; margin: 0 0 10px 0; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                                <span style="color:#ec4899;">👑</span> Pro Feature
+                            </h4>
+                            <p style="color: #94a3b8; font-size: 13px; text-align: center; max-width: 300px; margin: 0 0 15px 0;">
+                                <?php esc_html_e( 'Upgrade to Nexura Pro to access the dedicated Geo-Blocking Dashboard and block malicious traffic from 250+ countries at the firewall level.', 'nexura-security' ); ?>
+                            </p>
+                            <a href="<?php echo esc_url( admin_url( 'admin.php?page=nexura-about' ) ); ?>" class="button button-primary" style="background: #ec4899; border-color: #ec4899; box-shadow: 0 2px 10px rgba(236, 72, 153, 0.3);">
+                                <?php esc_html_e( 'Learn More', 'nexura-security' ); ?>
+                            </a>
+                        </div>
+                        
+                        <!-- Fake Background Content -->
+                        <div style="opacity: 0.4; filter: blur(2px); pointer-events: none; user-select: none;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px;">
+                                <?php 
+                                $fake_countries = ['Russia (RU)', 'China (CN)', 'North Korea (KP)', 'Iran (IR)', 'Syria (SY)', 'Brazil (BR)'];
+                                foreach($fake_countries as $fake_c) : ?>
+                                <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 4px;">
+                                    <label class="nexura-switch" style="margin: 0; transform: scale(0.8);">
+                                        <input type="checkbox" disabled />
+                                        <span class="nexura-slider"></span>
+                                    </label>
+                                    <span style="font-size: 13px;"><?php echo esc_html($fake_c); ?></span>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <?php endif; ?>
             <!-- Alert Notifications Section -->
             <tr>
                 <th scope="row"><?php esc_html_e( 'Alert Notifications', 'nexura-security' ); ?></th>
@@ -188,9 +253,35 @@ if ( ! defined( 'ABSPATH' ) ) {
                         </div>
                         <div style="margin-left: 0; margin-bottom: 16px;">
                             <input type="text" id="NEXURA_alert_email_address" name="NEXURA_alert_email_address" value="<?php echo esc_attr( get_option( 'NEXURA_alert_email_address' ) ); ?>" class="regular-text" placeholder="<?php echo esc_attr( get_option( 'admin_email' ) ); ?>" />
-                            <p class="description">
-                                <?php esc_html_e( 'Enter email addresses (comma-separated for multiple). Leave blank to use the default WordPress admin email.', 'nexura-security' ); ?>
-                            </p>
+                            <p class="description"><?php esc_html_e( 'Enter email addresses (comma-separated for multiple). Leave blank to use the default WordPress admin email.', 'nexura-security' ); ?></p>
+                        </div>
+                        
+                        <div style="margin-left: 15px; margin-bottom: 16px; border-left: 2px solid var(--nexura-border); padding-left: 15px;">
+                            <p style="font-weight: 600; margin-bottom: 10px;"><?php esc_html_e( 'Alert Severities:', 'nexura-security' ); ?></p>
+                            
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                <label class="nexura-switch" style="margin: 0; transform: scale(0.8);">
+                                    <input type="checkbox" name="NEXURA_email_alerts_critical" value="1" <?php checked( '1', get_option( 'NEXURA_email_alerts_critical', '1' ) ); ?> />
+                                    <span class="nexura-slider nexura-round"></span>
+                                </label>
+                                <span style="font-size: 13px; color: #ef4444; font-weight: bold;"><?php esc_html_e( 'Critical Events', 'nexura-security' ); ?></span>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                <label class="nexura-switch" style="margin: 0; transform: scale(0.8);">
+                                    <input type="checkbox" name="NEXURA_email_alerts_high" value="1" <?php checked( '1', get_option( 'NEXURA_email_alerts_high', '1' ) ); ?> />
+                                    <span class="nexura-slider nexura-round"></span>
+                                </label>
+                                <span style="font-size: 13px; color: #f59e0b; font-weight: bold;"><?php esc_html_e( 'High Events', 'nexura-security' ); ?></span>
+                            </div>
+
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                <label class="nexura-switch" style="margin: 0; transform: scale(0.8);">
+                                    <input type="checkbox" name="NEXURA_email_alerts_medium" value="1" <?php checked( '1', get_option( 'NEXURA_email_alerts_medium', '0' ) ); ?> />
+                                    <span class="nexura-slider nexura-round"></span>
+                                </label>
+                                <span style="font-size: 13px; color: #3b82f6; font-weight: bold;"><?php esc_html_e( 'Medium Events', 'nexura-security' ); ?></span>
+                            </div>
                         </div>
                         
                         <!-- Webhook Alert Toggle -->
@@ -202,7 +293,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                             <span><?php esc_html_e( 'Enable Webhook Alerts (Slack / Discord)', 'nexura-security' ); ?></span>
                         </div>
                         <div style="margin-left: 0; margin-bottom: 8px;">
-                            <input type="url" id="NEXURA_webhook_url" name="NEXURA_webhook_url" value="<?php echo esc_attr( get_option( 'NEXURA_webhook_url' ) ); ?>" class="regular-text" placeholder="https://hooks.slack.com/services/..." />
+                            <input type="text" id="NEXURA_webhook_url" name="NEXURA_webhook_url" value="<?php echo esc_attr( get_option( 'NEXURA_webhook_url' ) ); ?>" class="regular-text" placeholder="https://discord.com/api/webhooks/..." />
                             <p class="description">
                                 <?php esc_html_e( 'Enter your Slack or Discord Incoming Webhook URL. Alerts will be sent as formatted messages.', 'nexura-security' ); ?>
                             </p>
@@ -305,4 +396,38 @@ if ( ! defined( 'ABSPATH' ) ) {
         </table>
         <?php submit_button(); ?>
     </form>
+</div>
+
+<!-- Settings Export / Import -->
+<div class="nexura-card nexura-fade-in" style="margin-top: 20px;">
+    <h2><span class="nexura-card-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg></span> <?php esc_html_e( 'Export / Import Settings', 'nexura-security' ); ?></h2>
+    
+    <table class="form-table">
+        <tr>
+            <th scope="row"><?php esc_html_e( 'Export Settings', 'nexura-security' ); ?></th>
+            <td>
+                <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=nexura-settings&nexura_export_settings=1' ), 'nexura_export_settings_action' ) ); ?>" class="button button-secondary">
+                    <?php esc_html_e( 'Download Export (.json)', 'nexura-security' ); ?>
+                </a>
+                <p class="description">
+                    <?php esc_html_e( 'Download a JSON file containing all your Nexura Security settings. This does not export logs or scan results.', 'nexura-security' ); ?>
+                </p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row"><?php esc_html_e( 'Import Settings', 'nexura-security' ); ?></th>
+            <td>
+                <form method="post" action="<?php echo esc_url( admin_url( 'admin.php?page=nexura-settings' ) ); ?>" enctype="multipart/form-data">
+                    <?php wp_nonce_field( 'nexura_import_settings_action', 'nexura_import_settings_nonce' ); ?>
+                    <input type="file" name="nexura_import_file" accept=".json" required />
+                    <button type="submit" name="nexura_import_settings_submit" class="button button-primary">
+                        <?php esc_html_e( 'Import Settings', 'nexura-security' ); ?>
+                    </button>
+                    <p class="description">
+                        <?php esc_html_e( 'Select a Nexura settings JSON file to import. This will overwrite your current settings.', 'nexura-security' ); ?>
+                    </p>
+                </form>
+            </td>
+        </tr>
+    </table>
 </div>

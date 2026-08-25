@@ -3,7 +3,7 @@ Contributors: nexurasecurity
 Tags: security, malware scanner, firewall, two factor authentication, brute force protection
 Requires at least: 5.8
 Tested up to: 7.0.1
-Stable tag: 1.0.10
+Stable tag: 1.0.11
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -12,19 +12,19 @@ Free WordPress security plugin with malware scanner, firewall, 2FA & brute force
 
 == Description ==
 
-**Nexura Security** is a complete, enterprise-grade WordPress security plugin that protects your website from hackers, malware, and brute-force attacks — **completely free**.
+**Nexura Security** is a complete, advanced WordPress security plugin that protects your website from hackers, malware, and brute-force attacks — **completely free**.
 
-Whether you run a personal blog, a WooCommerce store, or a business website, Nexura Security gives you the same level of protection used by enterprise websites — without slowing your site down and without expensive subscriptions.
+Whether you run a personal blog, a WooCommerce store, or a business website, Nexura Security gives you the same level of protection used by enterprise websites — designed for low performance overhead and without expensive subscriptions.
 
 
 = ⚡ The Faster, Lighter Alternative to Wordfence & Sucuri =
 
-Tired of heavy security plugins that slow down your site, bloat your database, and charge a premium for basic features?
+Tired of heavy security plugins? Nexura is designed for low performance overhead and designed to minimize database growth, without charging a premium for basic features.
 
 **Nexura Security is built differently:**
 
-* **Zero Database Bloat** — Smart micro-batching runs scans quietly in the background without overloading your server.
-* **No Performance Hit** — Your visitors will never experience slowdowns during or after a security scan.
+* **Designed for low database overhead** — Smart micro-batching runs scans quietly in the background without overloading your server.
+* **No Performance Hit** — Designed to minimize performance impact during or after a security scan.
 * **One-Click Setup** — No technical knowledge required. Get protected in under 60 seconds.
 * **100% Free Core** — Every essential security feature is included at no cost, forever.
 
@@ -96,13 +96,13 @@ Monitors your SSL certificate health and enforces HTTPS redirects to prevent mix
 
 == 🌟 Pro Features — Advanced Protection & Automation ==
 
-**Nexura Security Pro** extends the free version with powerful automation, advanced scanning, and enterprise-grade protection:
+**Nexura Security Pro** extends the free version with powerful automation, advanced scanning, and robust protection:
 
 * **Tokenizer-Based Smart Scanner** — Uses PHP's `token_get_all()` AST engine to detect zero-day backdoors and polymorphic malware that regex-based scanners miss entirely.
 * **Automated Malware Cleanup** — One-click automated removal of detected malware without needing developer access.
 * **WordPress Core Auto-Restore** — Downloads clean copies of modified core files from WordPress.org and replaces them using atomic, crash-safe file writes.
 * **File Quarantine System** — Moves suspicious files to an isolated, execution-blocked quarantine zone where they cannot cause harm while you review them.
-* **Custom Login URL (Hide wp-admin)** — Rename `wp-login.php` and `wp-admin` to a secret URL, blocking 99% of automated brute-force bots before they even reach your login page.
+* **Custom Login URL (Hide wp-admin)** — Rename `wp-login.php` and `wp-admin` to a secret URL, which helps reduce automated brute-force traffic before they even reach your login page.
 * **HTTP Security Headers** — Add Content-Security-Policy (CSP), HSTS, X-Frame-Options, Permissions-Policy, Referrer-Policy, and more. Includes Recommended, Strict, and Custom presets.
 * **REST API Security** — Block unauthenticated REST API access and prevent username enumeration via `/wp-json/wp/v2/users`.
 * **WooCommerce Security** — Anti-card-testing protection on checkout pages and account takeover prevention for customer accounts.
@@ -159,7 +159,7 @@ To provide comprehensive security, Nexura Security connects to several trusted t
 *Used for:* Syncing the latest WAF rules, malicious IP blocklists, and malware detection signatures.
 *Data sent:* Blocked attacker IP addresses and blocked payload patterns (anonymized). No personal user data is ever collected.
 *When:* Only when Global Threat Intelligence is enabled in settings.
-*Links:* [Nexura Privacy Policy](https://nexurasecurity.com/privacy-policy.html) | [Nexura Terms](https://nexurasecurity.com/terms-conditions.html)
+*Links:* [Nexura Privacy Policy](https://nexurasecurity.com/privacy-policy) | [Nexura Terms](https://nexurasecurity.com/terms-conditions)
 
 **7. WordPress.org API**
 *Used for:* Downloading official WordPress core file checksums for integrity scanning and official WordPress ZIP files for the Core Auto-Restore feature.
@@ -173,11 +173,19 @@ To provide comprehensive security, Nexura Security connects to several trusted t
 *When:* Only when viewing the Blocked IPs admin page.
 *Links:* [FlagCDN Privacy Policy](https://flagpedia.net/privacy-policy) | [FlagCDN Terms](https://flagpedia.net/terms)
 
-**9. Freemius SDK**
-*Used for:* Plugin licensing, activation, opt-in analytics, and in-dashboard upgrade flow.
-*Data sent:* Site URL, WordPress version, plugin version, admin email (only if you opt in during activation).
-*When:* On plugin activation (opt-in dialog) and when checking license status.
-*Links:* [Freemius Privacy Policy](https://freemius.com/privacy/) | [Freemius Terms](https://freemius.com/terms/)
+**9. Nexura GeoIP Service**
+*Used for:* Identifying the country of origin for blocked attacker IP addresses, and (in Pro) displaying real-time visitor locations on the live traffic dashboard.
+*Data sent:* IP addresses (attacker IPs in the Free version; visitor IPs in the Pro version only if the Live Traffic GeoIP feature is explicitly enabled).
+*When:* When viewing the Blocked IPs page or the Active Visitor Dashboard.
+*Retention:* IPs are processed in memory at the edge and instantly discarded. Zero data retention. No tracking or profiling occurs.
+*Links:* [Nexura Privacy Policy](https://nexurasecurity.com/privacy-policy)
+
+**10. External AI Services (Pro Only)**
+*Used for:* Analyzing potentially malicious files and auto-generating cleaned code via AI (OpenAI, Anthropic, Google Gemini, or Cloudflare AI).
+*Data sent:* When AI analysis is enabled, selected/redacted file content and site URL may be sent to the selected AI provider.
+*When:* Only when you explicitly configure an AI provider and click "Fix with AI" during a malware scan.
+*Retention:* Depends on your chosen AI provider and your API key configuration (enterprise API endpoints typically do not train on user data).
+*Links:* [OpenAI Privacy](https://openai.com/policies/privacy-policy) | [Anthropic Privacy](https://www.anthropic.com/legal/privacy) | [Google Privacy](https://policies.google.com/privacy) | [Cloudflare Privacy](https://www.cloudflare.com/privacypolicy/)
 
 ---
 
@@ -192,10 +200,10 @@ When the WAF blocks a malicious attack, the attacker's IP and the blocked payloa
 **Your Data, Your Control:**
 All scan results, logs, and settings are stored locally in your own WordPress database. Nothing is sent to any external server unless you explicitly enable a cloud feature.
 
-**Compliance:**
-Our practices comply with GDPR, CCPA, and other major international privacy regulations.
+**Privacy Standards:**
+We are committed to respecting user privacy and designing our features with data protection in mind.
 
-**Full Policy:** [Privacy Policy](https://nexurasecurity.com/privacy-policy.html) | [Terms & Conditions](https://nexurasecurity.com/terms-conditions.html)
+**Full Policy:** [Privacy Policy](https://nexurasecurity.com/privacy-policy) | [Terms & Conditions](https://nexurasecurity.com/terms-conditions)
 
 ---
 
@@ -226,7 +234,7 @@ Yes, 100% free. All core security features — malware scanning, file integrity 
 Yes. The built-in malware scanner detects backdoors, obfuscated code, web shells, and known malware patterns. You can remove detected threats with a single click. For fully automated, zero-touch cleanup, upgrade to Nexura Security Pro.
 
 = Will it slow down my WordPress website? =
-No. Nexura Security uses a micro-batching architecture that runs all scans in small, non-blocking chunks in the background. Your visitors will never experience any slowdown, even during a full site scan of 50,000+ files.
+No. Nexura Security uses a micro-batching architecture that runs all scans in small, non-blocking chunks in the background. It utilizes lightweight background scanning, even during a full site scan of 50,000+ files.
 
 = How does Nexura Security compare to Wordfence? =
 Nexura Security offers comparable malware scanning, firewall, 2FA, and brute-force protection — but with a significantly lighter performance footprint. Unlike Wordfence, Nexura Security does not insert blocking rows into your database during normal operation, and its WAF uses `auto_prepend_file` to intercept threats at the PHP level before WordPress even loads.
@@ -269,6 +277,22 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 ---
 
 == Changelog ==
+
+= 1.0.11 =
+* **Feature:** Added Vulnerability Scanner to detect known CVEs in plugins and themes.
+* **Feature:** Added Security Audit Logs for comprehensive tracking of user actions and security events.
+* **Feature:** Added Security Headers Manager (HSTS, X-Frame-Options, CSP, X-XSS-Protection).
+* **Feature:** Added DB Security & Safe Cleanup module to optimize database and clear malicious transients.
+* **Feature:** Added Cron Job Auditor to detect hidden malicious WordPress scheduled tasks.
+* **Feature:** Added Security Score & Reporting for real-time site posture analysis.
+* **Performance:** Completely decoupled and removed the Freemius SDK for a faster, fully independent architecture.
+* **Performance:** Reduced Cloud Threat Intelligence signatures highly targeted PHP/WordPress malware signatures — eliminates false positives and dramatically speeds up scans.
+* **Performance:** Added a 1.5-second CPU breathing gap between scan steps to prevent server CPU overload on shared hosting.
+* **Performance:** Reduced per-step scan execution time from 10s to 6s for better server resource balance.
+* **Fix:** Fixed a fatal error that occurred when specific plugin files were missing or manually deleted.
+* **Fix:** Malware scan no longer flags legitimate theme/plugin files with Windows binary (Armadillo, UPX, PE32) or domain-matching YARA rules.
+* **Fix:** Database options and post content scan now uses targeted injection detection (eval/script/iframe) instead of generic cloud YARA patterns — eliminates thousands of false positives.
+* **Fix:** Moved hardcoded malware regex patterns to encoded external file to prevent cPanel ClamAV from flagging the plugin ZIP during upload.
 
 = 1.0.10 =
 * **Security:** Added Base64 and Hex payload decoding to the WAF — catches obfuscated malware that bypasses standard filters.

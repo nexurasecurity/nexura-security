@@ -1,4 +1,5 @@
 <?php
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
@@ -28,4 +29,31 @@ $NEXURA_plan = function_exists('nexura_is_pro') && nexura_is_pro() ? 'pro' : 'fr
     <div id="nexura-fim-results">
         <p style="color: var(--nexura-text-muted);"><?php esc_html_e( 'No recent checks.', 'nexura-security' ); ?></p>
     </div>
+</div>
+
+<div class="nexura-card nexura-fade-in" style="animation-delay: 0.3s;">
+    <h2><span class="nexura-card-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></span> <?php esc_html_e( 'Change History', 'nexura-security' ); ?></h2>
+    <?php
+    $history = get_option( 'NEXURA_fim_history', [] );
+    if ( empty( $history ) ) {
+        echo '<p style="color: var(--nexura-text-muted);">' . esc_html__( 'No changes detected yet.', 'nexura-security' ) . '</p>';
+    } else {
+        echo '<table class="wp-list-table widefat fixed striped">';
+        echo '<thead><tr>';
+        echo '<th>' . esc_html__( 'Time', 'nexura-security' ) . '</th>';
+        echo '<th>' . esc_html__( 'Added Files', 'nexura-security' ) . '</th>';
+        echo '<th>' . esc_html__( 'Modified Files', 'nexura-security' ) . '</th>';
+        echo '<th>' . esc_html__( 'Deleted Files', 'nexura-security' ) . '</th>';
+        echo '</tr></thead><tbody>';
+        foreach ( $history as $entry ) {
+            echo '<tr>';
+            echo '<td>' . esc_html( $entry['time'] ) . '</td>';
+            echo '<td style="color: #10b981;">+' . intval( $entry['added'] ) . '</td>';
+            echo '<td style="color: #f59e0b;">~' . intval( $entry['modified'] ) . '</td>';
+            echo '<td style="color: #ef4444;">-' . intval( $entry['deleted'] ) . '</td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+    }
+    ?>
 </div>

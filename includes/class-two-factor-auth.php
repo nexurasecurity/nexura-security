@@ -135,8 +135,8 @@ class Two_Factor_Auth {
         $is_enabled = get_user_meta( $user->ID, 'NEXURA_2fa_enabled', true );
 
         if ( $is_enabled === '1' ) {
-            // Check if device is remembered
-            if ( get_option( 'NEXURA_allow_remember_device', '0' ) === '1' && isset( $_COOKIE['nexura_2fa_remember_' . $user->ID] ) ) {
+            // Check if device is remembered (Pro feature)
+            if ( function_exists( 'nexura_is_pro' ) && nexura_is_pro() && get_option( 'NEXURA_allow_remember_device', '0' ) === '1' && isset( $_COOKIE['nexura_2fa_remember_' . $user->ID] ) ) {
                 $cookie_hash = sanitize_text_field( wp_unslash( $_COOKIE['nexura_2fa_remember_' . $user->ID] ) );
                 $stored_hashes = get_user_meta( $user->ID, 'NEXURA_2fa_remember_hashes', true );
                 if ( is_array( $stored_hashes ) && in_array( $cookie_hash, $stored_hashes, true ) ) {
@@ -212,8 +212,8 @@ class Two_Factor_Auth {
                 delete_transient( 'NEXURA_2fa_token_' . $token );
                 delete_transient( 'NEXURA_2fa_attempts_' . $token );
 
-                // Handle Remember Device
-                if ( get_option( 'NEXURA_allow_remember_device', '0' ) === '1' && isset( $_POST['NEXURA_remember_device'] ) ) {
+                // Handle Remember Device (Pro feature)
+                if ( function_exists( 'nexura_is_pro' ) && nexura_is_pro() && get_option( 'NEXURA_allow_remember_device', '0' ) === '1' && isset( $_POST['NEXURA_remember_device'] ) ) {
                     $token_string = wp_generate_password( 64, false, false );
                     $hash = wp_hash( $token_string );
                     $stored_hashes = get_user_meta( $user->ID, 'NEXURA_2fa_remember_hashes', true );
@@ -234,7 +234,7 @@ class Two_Factor_Auth {
                 do_action( 'wp_login', $user->user_login, $user ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 
                 // SECURITY FIX: Validate redirect URL is same-site to prevent Open Redirect attacks
-                $raw_redirect = isset( $_REQUEST['redirect_to'] ) ? wp_unslash( $_REQUEST['redirect_to'] ) : admin_url(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                $raw_redirect = isset( $_REQUEST['redirect_to'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['redirect_to'] ) ) : admin_url(); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
                 $redirect_to  = wp_validate_redirect( $raw_redirect, admin_url() );
                 wp_safe_redirect( $redirect_to );
                 exit;
@@ -262,7 +262,7 @@ class Two_Factor_Auth {
                 <label for="NEXURA_2fa_code"><?php esc_html_e( 'Authentication Code or Recovery Code', 'nexura-security' ); ?><br />
                 <input type="text" name="NEXURA_2fa_code" id="NEXURA_2fa_code" class="input" value="" size="20" autocomplete="one-time-code" autofocus /></label>
             </p>
-            <?php if ( get_option( 'NEXURA_allow_remember_device', '0' ) === '1' ) : ?>
+            <?php if ( function_exists( 'nexura_is_pro' ) && nexura_is_pro() && get_option( 'NEXURA_allow_remember_device', '0' ) === '1' ) : ?>
             <p>
                 <label for="NEXURA_remember_device">
                     <input type="checkbox" name="NEXURA_remember_device" id="NEXURA_remember_device" value="1" />

@@ -7,42 +7,39 @@ if ( ! defined( 'ABSPATH' ) ) {
 // Fetch dynamic data for the dashboard
 global $wpdb;
 $NEXURA_table_name    = $wpdb->prefix . 'NEXURA_scan_results';
-$NEXURA_total_issues  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_scan_results" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-$NEXURA_high_issues   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_scan_results WHERE risk_score = %s", 'High' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-$NEXURA_medium_issues = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_scan_results WHERE risk_score = %s", 'Medium' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+$NEXURA_total_issues  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_scan_results" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+$NEXURA_high_issues   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_scan_results WHERE risk_score = %s", 'High' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+$NEXURA_medium_issues = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_scan_results WHERE risk_score = %s", 'Medium' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 $NEXURA_total_scanned = (int) get_option( 'NEXURA_scan_total', 0 );
 
-$NEXURA_critical_issues = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_scan_results WHERE risk_score = %s", 'Critical' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+$NEXURA_critical_issues = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_scan_results WHERE risk_score = %s", 'Critical' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
-$NEXURA_score = 100;
-if ( $NEXURA_critical_issues > 0 ) $NEXURA_score -= min( 80, $NEXURA_critical_issues * 30 );
-if ( $NEXURA_high_issues > 0 )     $NEXURA_score -= min( 50, $NEXURA_high_issues * 15 );
-if ( $NEXURA_medium_issues > 0 )   $NEXURA_score -= min( 30, $NEXURA_medium_issues * 5 );
+$NEXURA_score = \Nexura_Security\Security_Score::get_score();
+$NEXURA_risk = \Nexura_Security\Security_Score::get_risk_level( $NEXURA_score );
 
-// If any malware exists, the site is NOT protected. Force score below 80.
+// If any malware exists, the site is NOT protected. Force score drop.
 if ( $NEXURA_total_issues > 0 && $NEXURA_score >= 80 ) {
-    $NEXURA_score = 79;
+    $NEXURA_score -= 20;
+    $NEXURA_risk = \Nexura_Security\Security_Score::get_risk_level( $NEXURA_score );
 }
-$NEXURA_score = max( 0, $NEXURA_score );
 
-
+$NEXURA_score_class = strtolower( str_replace(' ', '-', $NEXURA_risk['label']) );
 if ( $NEXURA_score >= 80 ) {
     $NEXURA_score_class = 'safe';
-    $NEXURA_score_text  = 'Protected';
 } elseif ( $NEXURA_score >= 50 ) {
     $NEXURA_score_class = 'warning';
-    $NEXURA_score_text  = 'Action Required';
 } else {
     $NEXURA_score_class = 'critical';
-    $NEXURA_score_text  = 'At Risk';
 }
+$NEXURA_score_text  = $NEXURA_risk['label'];
 
-$NEXURA_recent_alerts = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}NEXURA_scan_results ORDER BY id DESC LIMIT 8", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+$NEXURA_recent_alerts = $wpdb->get_results( "SELECT * FROM {$wpdb->prefix}NEXURA_scan_results ORDER BY id DESC LIMIT 8", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 // Fetch attack logs
 $NEXURA_attack_logs = [];
 $table_attack_logs = $wpdb->prefix . 'NEXURA_attack_logs';
-if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_attack_logs'" ) === $table_attack_logs ) {
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_attack_logs ) ) === $table_attack_logs ) {
     
     // --- SYNC PRO WAF LOGS ---
     $upload_dir = wp_upload_dir();
@@ -62,7 +59,7 @@ if ( $wpdb->get_var( "SHOW TABLES LIKE '$table_attack_logs'" ) === $table_attack
     }
     // -------------------------
 
-    $NEXURA_attack_logs = $wpdb->get_results( "SELECT * FROM {$table_attack_logs} ORDER BY id DESC LIMIT 20", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+    $NEXURA_attack_logs = $wpdb->get_results( "SELECT * FROM {$table_attack_logs} ORDER BY id DESC LIMIT 20", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 }
 
 $NEXURA_circumference = 2 * 3.14159 * 65;
@@ -158,6 +155,10 @@ $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circu
             <a href="#" id="nexura-quick-backup-db" class="nexura-quick-action">
                 <span class="nexura-quick-action-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg></span>
                 <span>Backup Database</span>
+            </a>
+            <a href="<?php echo esc_url( wp_nonce_url( admin_url( 'admin.php?page=nexura-dashboard&nexura_download_report=1' ), 'nexura_download_report_action' ) ); ?>" class="nexura-quick-action" target="_blank">
+                <span class="nexura-quick-action-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></span>
+                <span>Download PDF Report</span>
             </a>
         </div>
     </div>
@@ -336,7 +337,7 @@ $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circu
                             <?php if ( $log['country'] !== 'Unknown' ) : ?>
                                 <?php echo esc_html( $log['country'] ); ?>
                             <?php else: ?>
-                                <span style="color: var(--nexura-text-muted); font-size: 12px; font-style: italic;">Detecting...</span>
+                                <span style="color: var(--nexura-text-muted); font-size: 12px; font-style: italic;">Unknown (Pro)</span>
                             <?php endif; ?>
                         </td>
                         <td>
@@ -363,7 +364,7 @@ $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circu
             </tbody>
         </table>
 
-        <!-- Smart JavaScript for Country Detection without slowing down backend -->
+        <!-- Smart JavaScript for Country Detection via Proprietary Cloudflare Worker -->
         <script>
         document.addEventListener('DOMContentLoaded', function() {
             const countryCells = document.querySelectorAll('.nexura-country-cell');
@@ -371,45 +372,36 @@ $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circu
             
             countryCells.forEach(cell => {
                 const ip = cell.getAttribute('data-ip');
-                if (ip && cell.textContent.trim() === 'Detecting...') {
+                if (ip && cell.textContent.trim() === 'Unknown (Pro)') {
                     uniqueIps.add(ip);
                 }
             });
 
             if (uniqueIps.size > 0) {
-                // Batch request to ip-api for better performance
                 const ipArray = Array.from(uniqueIps);
-                const reqBody = ipArray.map(ip => { return { query: ip, fields: "country,countryCode" } });
-
-                fetch('http://ip-api.com/batch', {
+                
+                fetch('https://sgs-db-worker.sentinel-guard-security.workers.dev/v1/geoip', {
                     method: 'POST',
-                    body: JSON.stringify(reqBody)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ips: ipArray })
                 })
                 .then(res => res.json())
                 .then(data => {
-                    const countryMap = {};
-                    data.forEach(result => {
-                        if (result.status === 'success') {
-                            countryMap[result.query] = {
-                                name: result.country,
-                                code: result.countryCode.toLowerCase()
-                            };
-                        }
-                    });
+                    const countryMap = data.data || {};
 
                     countryCells.forEach(cell => {
                         const ip = cell.getAttribute('data-ip');
-                        if (countryMap[ip]) {
-                            const flagUrl = 'https://flagcdn.com/16x12/' + countryMap[ip].code + '.png';
-                            cell.innerHTML = '<img src="' + flagUrl + '" alt="' + countryMap[ip].code + '" style="margin-right: 6px; vertical-align: middle;"> ' + countryMap[ip].name;
-                        } else if (cell.textContent.trim() === 'Detecting...') {
+                        if (countryMap[ip] && countryMap[ip].code) {
+                            const flagUrl = 'https://flagcdn.com/16x12/' + countryMap[ip].code.toLowerCase() + '.png';
+                            cell.innerHTML = '<img src="' + flagUrl + '" alt="' + countryMap[ip].code + '" style="margin-right: 6px; vertical-align: middle;"> ' + countryMap[ip].country;
+                        } else if (cell.textContent.trim() === 'Unknown (Pro)') {
                             cell.innerHTML = '<span style="color: var(--nexura-text-muted);">Unknown</span>';
                         }
                     });
                 })
                 .catch(err => {
                     countryCells.forEach(cell => {
-                        if (cell.textContent.trim() === 'Detecting...') {
+                        if (cell.textContent.trim() === 'Unknown (Pro)') {
                             cell.innerHTML = '<span style="color: var(--nexura-text-muted);">Unknown</span>';
                         }
                     });
@@ -417,6 +409,7 @@ $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circu
             }
         });
         </script>
+
     <?php else : ?>
         <div style="text-align: center; padding: 40px 0; color: var(--nexura-text-muted);">
             <div style="margin-bottom: 12px; display: flex; justify-content: center;"><svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#10b981;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>

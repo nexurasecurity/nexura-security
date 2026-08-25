@@ -89,39 +89,9 @@ class Cron {
      * Sends an email report after the scan is complete (Free version only).
      */
     private function send_scan_report_email( $response ) {
-        // Do not send if Pro is active, as Pro handles its own advanced reporting.
-        if ( function_exists( 'nexura_is_pro' ) && nexura_is_pro() ) {
-            return;
+        if ( class_exists( '\Nexura_Security\Report_Generator' ) ) {
+            \Nexura_Security\Report_Generator::generate_and_send( $response );
         }
-
-        $issues = isset($response['issues']) ? intval($response['issues']) : 0;
-        $processed = isset($response['processed']) ? intval($response['processed']) : 0;
-        
-        $to = get_option( 'admin_email' );
-        $subject = '[' . get_bloginfo('name') . '] Nexura Security - Daily Scan Report';
-        
-        $message = "Hello,\n\n";
-        $message .= "Nexura Security has completed a malware scan on your website (" . get_bloginfo('name') . ").\n\n";
-        $message .= "Scan Results:\n";
-        $message .= "- Files Processed: " . $processed . "\n";
-        $message .= "- Issues Detected: " . $issues . "\n\n";
-        
-        if ( $issues > 0 ) {
-            $message .= "Action Required: Please log in to your WordPress dashboard and check the Nexura Security -> Issues Detected page to resolve these threats.\n\n";
-        } else {
-            $message .= "Great news! Your website appears to be clean.\n\n";
-        }
-        
-        $message .= "---\n";
-        $message .= "🔒 UPGRADE TO NEXURA SECURITY PRO 🔒\n";
-        $message .= "Get advanced protection including:\n";
-        $message .= "- Automatic Scheduled Scanning at Custom Intervals\n";
-        $message .= "- Real-time Active Malware Blocking\n";
-        $message .= "- Automated Vulnerability Patching\n";
-        $message .= "- Cloud Firewall (WAF) & Advanced Hardening\n";
-        $message .= "Upgrade today to keep your site fully secured!\n";
-        
-        wp_mail( $to, $subject, $message );
     }
 
     /**

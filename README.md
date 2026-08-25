@@ -5,7 +5,7 @@
   <br><br>
   <img src="https://img.shields.io/badge/Requires_WP-5.8+-blue.svg?style=for-the-badge" alt="Requires WP">
   <img src="https://img.shields.io/badge/Requires_PHP-7.4+-blue.svg?style=for-the-badge" alt="Requires PHP">
-  <img src="https://img.shields.io/badge/Version-1.0.10-orange.svg?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Version-1.0.11-orange.svg?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Tested_up_to-7.0.1-green.svg?style=for-the-badge" alt="Tested WP">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv2-blue.svg?style=for-the-badge" alt="License"></a>
   <br>
@@ -19,15 +19,16 @@
 
 **Nexura Security** is a complete, all-in-one WordPress security plugin that protects your website from hackers, malware, and brute-force attacks — **completely free**.
 
-Whether you run a personal blog, an online store, or a business website, Nexura Security gives you enterprise-level protection without slowing your site down.
+Whether you run a personal blog, an online store, or a business website, Nexura Security gives you advanced protection designed for low performance overhead.
 
 🔗 **[Download Free on WordPress.org](https://wordpress.org/plugins/nexura-security/)** | 🌐 **[nexurasecurity.com](https://nexurasecurity.com)** | 📋 **[Changelog](CHANGELOG.md)**
 
 ## ⚡ Why Choose Nexura Security?
 
-Looking for a **lightweight, faster alternative** to Wordfence, Sucuri, or MalCare? Tired of heavy security plugins that slow down your site and bloat your database?
+Looking for a **lightweight, faster alternative** to Wordfence, Sucuri, or MalCare? Tired of heavy security plugins? Nexura is designed for low performance overhead and designed to minimize database growth.
 
-* **Zero Database Bloat** — Uses smart micro-batching so scans run quietly in the background without slowing down your server.
+* **Designed for low database overhead** — Uses smart micro-batching so scans run quietly in the background without slowing down your server.
+* **No Performance Hit** — Designed to minimize performance impact during or after a security scan.
 * **Easy to Use** — One-click setup. No technical knowledge required.
 * **100% Free Core** — All essential security features are included at no cost.
 
@@ -75,12 +76,12 @@ Want to go further? **Nexura Security Pro** adds powerful automation and advance
 
 ## 🔗 Third-Party Services & Privacy
 
-To provide comprehensive security, Nexura Security connects to several trusted third-party services (e.g., Cloudflare, HaveIBeenPwned, VirusTotal, WordPress.org API, and the Nexura Threat Intel Cloud). **No connections are made automatically — each feature must be enabled by you in the plugin settings.**
+To provide comprehensive security, Nexura Security connects to several trusted third-party services (e.g., Cloudflare, HaveIBeenPwned, VirusTotal, WordPress.org API, the Nexura GeoIP Service, and the Nexura Threat Intel Cloud). **No connections are made automatically — each feature must be enabled by you in the plugin settings.**
 
 We believe in complete transparency about how your data is handled:
 * Nexura Security does **NOT** collect any personal data from your website visitors.
 * All scan results, logs, and settings are stored locally in your own WordPress database.
-* Our data handling practices comply with GDPR, CCPA, and major international privacy regulations.
+* We are committed to respecting user privacy and designing our features with data protection in mind.
 
 For full details, please review our [Privacy Policy](https://nexurasecurity.com/privacy-policy.html) and [Terms & Conditions](https://nexurasecurity.com/terms-conditions.html).
 

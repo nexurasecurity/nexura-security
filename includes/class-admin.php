@@ -15,13 +15,53 @@ class Admin {
     /**
      * Initializes admin hooks.
      */
+    public function render_free_sidebar_menus( $current_slug ) {
+        // Output the free Security Headers menu item if Pro is not active
+        if ( ! nexura_is_pro() ) {
+            $active_class = ( $current_slug === 'security-headers' ) ? 'active' : '';
+            echo '<a href="' . esc_url( admin_url( 'admin.php?page=nexura-security-headers' ) ) . '" class="nexura-nav-item ' . esc_attr( $active_class ) . '">';
+            echo '<span class="nexura-nav-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg></span> Security Headers';
+            echo '</a>';
+        }
+    }
+
     public function init() {
         add_action( 'admin_init', [ $this, 'register_settings' ] );
         add_action( 'admin_init', [ $this, 'run_migrations' ] );
+        add_action( 'admin_init', [ $this, 'handle_report_download' ] );
+        add_action( 'admin_init', [ $this, 'handle_settings_export_import' ] );
         add_action( 'admin_menu', [ $this, 'register_menus' ] );
+        
+        // Output free version specific menus in the custom sidebar
+        add_action( 'nexura_free_sidebar_menus', [ $this, 'render_free_sidebar_menus' ] );
+
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_assets' ] );
         add_action( 'wp_dashboard_setup', [ $this, 'register_dashboard_widget' ] );
         add_action( 'post_submitbox_start', [ $this, 'render_post_submitbox_marketing' ] );
+
+        // Suppress ALL admin notices on Nexura pages (Freemius, WordPress core, other plugins).
+        // We hook at PHP_INT_MIN so we run FIRST inside do_action('admin_notices') and
+        // remove every other callback before it can output anything.
+        add_action( 'current_screen', function() {
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            $page = isset( $_GET['page'] ) ? sanitize_text_field( wp_unslash( $_GET['page'] ) ) : '';
+            if ( strpos( $page, 'nexura' ) === false ) {
+                return;
+            }
+            add_action( 'admin_notices', function() {
+                global $wp_filter;
+                if ( isset( $wp_filter['admin_notices'] ) ) {
+                    foreach ( array_keys( $wp_filter['admin_notices']->callbacks ) as $priority ) {
+                        // Keep only our own suppressor (priority = PHP_INT_MIN)
+                        if ( $priority !== PHP_INT_MIN ) {
+                            unset( $wp_filter['admin_notices']->callbacks[ $priority ] );
+                        }
+                    }
+                }
+            }, PHP_INT_MIN );
+            remove_all_actions( 'all_admin_notices' );
+            remove_all_actions( 'user_admin_notices' );
+        } );
     }
 
     /**
@@ -83,6 +123,115 @@ class Admin {
     }
 
     /**
+     * Handles the on-demand download of the PDF scan report.
+     */
+    public function handle_report_download() {
+        if ( isset( $_GET['nexura_download_report'] ) && $_GET['nexura_download_report'] == '1' ) {
+            // Verify nonce
+            if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'nexura_download_report_action' ) ) {
+                wp_die( esc_html__( 'Security check failed.', 'nexura-security' ) );
+            }
+
+            // Verify permissions
+            if ( ! current_user_can( 'manage_options' ) ) {
+                wp_die( esc_html__( 'You do not have permission to download this report.', 'nexura-security' ) );
+            }
+
+            // Require Report Generator
+            require_once NEXURA_PLUGIN_DIR . 'includes/class-report-generator.php';
+            
+            global $wpdb;
+            $table_name    = $wpdb->prefix . 'NEXURA_scan_results';
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
+            $issues        = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
+            $processed     = (int) get_option( 'NEXURA_scan_total', 0 );
+
+            $response = [
+                'issues'    => $issues,
+                'processed' => $processed,
+            ];
+
+            // Clean output buffer before generating PDF
+            while ( ob_get_level() ) {
+                ob_end_clean();
+            }
+
+            \Nexura_Security\Report_Generator::generate_and_send( $response, true ); // Passing true to download instead of email
+            exit;
+        }
+    }
+
+    /**
+     * Handles export and import of settings.
+     */
+    public function handle_settings_export_import() {
+        // Handle Export
+        if ( isset( $_GET['nexura_export_settings'] ) && $_GET['nexura_export_settings'] == '1' ) {
+            if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'nexura_export_settings_action' ) ) {
+                wp_die( esc_html__( 'Security check failed.', 'nexura-security' ) );
+            }
+            if ( ! current_user_can( 'manage_options' ) ) {
+                wp_die( esc_html__( 'You do not have permission to export settings.', 'nexura-security' ) );
+            }
+
+            global $wpdb;
+            $options = $wpdb->get_results( "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE 'NEXURA_%' AND option_name NOT LIKE '\_transient%'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+
+            $export_data = [];
+            foreach ( $options as $option ) {
+                $export_data[ $option->option_name ] = maybe_unserialize( $option->option_value );
+            }
+
+            $json_data = wp_json_encode( $export_data, JSON_PRETTY_PRINT );
+
+            while ( ob_get_level() ) {
+                ob_end_clean();
+            }
+
+            header( 'Content-Description: File Transfer' );
+            header( 'Content-Type: application/json; charset=' . get_option( 'blog_charset' ) );
+            header( 'Content-Disposition: attachment; filename="nexura-settings-export-' . current_time( 'Y-m-d' ) . '.json"' );
+            header( 'Content-Length: ' . strlen( $json_data ) );
+            
+            echo $json_data; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+            exit;
+        }
+
+        // Handle Import
+        if ( isset( $_POST['nexura_import_settings_submit'] ) && isset( $_FILES['nexura_import_file'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing
+            if ( ! isset( $_POST['nexura_import_settings_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nexura_import_settings_nonce'] ) ), 'nexura_import_settings_action' ) ) {
+                wp_die( esc_html__( 'Security check failed.', 'nexura-security' ) );
+            }
+            if ( ! current_user_can( 'manage_options' ) ) {
+                wp_die( esc_html__( 'You do not have permission to import settings.', 'nexura-security' ) );
+            }
+
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash
+            $file = $_FILES['nexura_import_file'];
+            if ( $file['error'] !== UPLOAD_ERR_OK || empty( $file['tmp_name'] ) ) {
+                wp_die( esc_html__( 'Error uploading file.', 'nexura-security' ) );
+            }
+
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+            $json_data = file_get_contents( $file['tmp_name'] );
+            $import_data = json_decode( $json_data, true );
+
+            if ( ! is_array( $import_data ) ) {
+                wp_die( esc_html__( 'Invalid settings file.', 'nexura-security' ) );
+            }
+
+            foreach ( $import_data as $key => $value ) {
+                if ( strpos( $key, 'NEXURA_' ) === 0 ) {
+                    update_option( sanitize_text_field( $key ), $value );
+                }
+            }
+
+            wp_safe_redirect( add_query_arg( [ 'page' => 'nexura-settings', 'imported' => 'true' ], admin_url( 'admin.php' ) ) );
+            exit;
+        }
+    }
+
+    /**
      * Registers settings options.
      */
     public function register_settings() {
@@ -94,12 +243,20 @@ class Admin {
         register_setting( 'NEXURA_settings_group', 'NEXURA_scan_plugins', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_scan_themes', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_scan_uploads', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_smart_scan', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_delete_data_on_uninstall', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_trust_badge_footer', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_pwned_check', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_hide_third_party_notices', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_magic_link', $sanitize_args );
+        
+        // Brute-force settings
+        register_setting( 'NEXURA_settings_group', 'NEXURA_brute_force_max_attempts', [ 'sanitize_callback' => 'absint' ] );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_brute_force_lockout', [ 'sanitize_callback' => 'absint' ] );
+        
         // Hardening settings
         register_setting( 'NEXURA_hardening_group', 'NEXURA_disable_file_editor', $sanitize_args );
+        register_setting( 'NEXURA_hardening_group', 'block_php_uploads', $sanitize_args );
         register_setting( 'NEXURA_hardening_group', 'NEXURA_add_security_headers', $sanitize_args );
         register_setting( 'NEXURA_ssl_group', 'NEXURA_force_ssl', $sanitize_args );
         register_setting( 'NEXURA_hardening_group', 'NEXURA_restrict_rest_api', $sanitize_args );
@@ -117,6 +274,9 @@ class Admin {
         // Alert System settings
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_email_alerts', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_alert_email_address', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_email_alerts_critical', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_email_alerts_high', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_email_alerts_medium', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_webhook_alerts', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_webhook_url', [ 'sanitize_callback' => 'esc_url_raw' ] );
         
@@ -145,6 +305,16 @@ class Admin {
         // Manage Auto-Heal Drop-in on Option Update
         add_action( 'update_option_NEXURA_enable_auto_heal', [ $this, 'manage_auto_heal_dropin' ], 10, 3 );
         add_action( 'add_option_NEXURA_enable_auto_heal', [ $this, 'manage_auto_heal_dropin_add' ], 10, 2 );
+
+        // Security Headers Settings
+        register_setting( 'NEXURA_security_headers_group', 'NEXURA_sh_enable_all', $sanitize_args );
+        register_setting( 'NEXURA_security_headers_group', 'NEXURA_sh_x_frame_options', $sanitize_args );
+        register_setting( 'NEXURA_security_headers_group', 'NEXURA_sh_x_xss_protection', $sanitize_args );
+        register_setting( 'NEXURA_security_headers_group', 'NEXURA_sh_x_content_type_options', $sanitize_args );
+        register_setting( 'NEXURA_security_headers_group', 'NEXURA_sh_strict_transport_security', $sanitize_args );
+        register_setting( 'NEXURA_security_headers_group', 'NEXURA_sh_referrer_policy', $sanitize_args );
+        register_setting( 'NEXURA_security_headers_group', 'NEXURA_sh_permissions_policy', [ 'sanitize_callback' => 'sanitize_text_field' ] );
+        register_setting( 'NEXURA_security_headers_group', 'NEXURA_sh_content_security_policy', [ 'sanitize_callback' => 'sanitize_textarea_field' ] );
 
         // Schedule Core Backup download when WAF is enabled
         add_action( 'update_option_NEXURA_enable_waf', [ $this, 'schedule_core_backup_download' ], 10, 3 );
@@ -242,7 +412,6 @@ class Admin {
         return $sanitized;
     }
 
-
     /**
      * Registers the plugin admin menu.
      */
@@ -254,7 +423,7 @@ class Admin {
             'nexura',
             [ $this, 'render_dashboard' ],
             'dashicons-shield',
-            80
+            '3.14159'
         );
 
         $submenu_pages = [
@@ -266,13 +435,30 @@ class Admin {
             'google-safe-browsing' => __( 'Google Safe Browsing', 'nexura-security' ),
             'settings'             => __( 'Settings', 'nexura-security' ),
             'login-security'       => __( 'Login Security', 'nexura-security' ),
+            'audit-logs'           => __( 'Audit Logs', 'nexura-security' ),
+            'cron-audit'           => __( 'Cron Audit', 'nexura-security' ),
+            'db-security'          => __( 'Database Security', 'nexura-security' ),
             'ssl-settings'         => __( 'SSL & HTTPS', 'nexura-security' ),
             'about'                => __( 'About', 'nexura-security' ),
+            'contact'              => __( 'Contact Us', 'nexura-security' ),
         ];
 
+        // Only add Free Security Headers menu if Pro is not installed/active
+        if ( ! nexura_is_pro() ) {
+            // Insert it after hardening
+            $submenu_pages = array_slice( $submenu_pages, 0, 5, true ) +
+                [ 'security-headers' => __( 'Security Headers', 'nexura-security' ) ] +
+                array_slice( $submenu_pages, 5, null, true );
+        }
+
+        // Define which slugs should be visible in the native WordPress sidebar
+        $visible_slugs = [ 'dashboard', 'settings', 'about', 'contact' ];
+
         foreach ( $submenu_pages as $slug => $title ) {
+            $parent = in_array( $slug, $visible_slugs, true ) ? 'nexura' : 'nexura_hidden';
+            
             add_submenu_page(
-                'nexura',
+                $parent,
                 $title . ' &lsaquo; ' . __( 'Nexura', 'nexura-security' ),
                 $title,
                 'manage_options',
@@ -290,6 +476,7 @@ class Admin {
         if ( get_option( 'NEXURA_hide_third_party_notices' ) === '1' ) {
             remove_all_actions( 'admin_notices' );
             remove_all_actions( 'all_admin_notices' );
+            add_action( 'admin_notices', 'settings_errors' );
         }
 
         if ( strpos( $hook_suffix, 'nexura' ) === false && ! in_array( $hook_suffix, [ 'profile.php', 'user-edit.php' ], true ) ) {
@@ -300,6 +487,7 @@ class Admin {
         if ( strpos( $hook_suffix, 'nexura' ) !== false ) {
             remove_all_actions( 'admin_notices' );
             remove_all_actions( 'all_admin_notices' );
+            add_action( 'admin_notices', 'settings_errors' );
         }
 
         // Google Fonts - Inter (Loaded locally from admin-style.css)
@@ -368,8 +556,8 @@ class Admin {
                 $display_date = gmdate( 'M j', strtotime( "-$i days" ) );
                 $recaptcha_stats['labels'][] = $display_date;
                 
-                $human_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_recaptcha_logs WHERE DATE(timestamp) = %s AND score >= %f", $date, $threshold ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-                $bot_count   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_recaptcha_logs WHERE DATE(timestamp) = %s AND score < %f", $date, $threshold ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+                $human_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_recaptcha_logs WHERE DATE(timestamp) = %s AND score >= %f", $date, $threshold ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                $bot_count   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_recaptcha_logs WHERE DATE(timestamp) = %s AND score < %f", $date, $threshold ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 
                 $recaptcha_stats['humans'][] = $human_count;
                 $recaptcha_stats['bots'][]   = $bot_count;
@@ -446,7 +634,7 @@ class Admin {
             'is_license_active' => $is_license_active,
             'pro_slugs'      => [
                 'nexura-active-monitoring', 'nexura-vulnerability-audit', 'nexura-third-party-audit',
-                'nexura-performance', 'nexura-file-snapshots', 'nexura-logs', 'nexura-security-headers',
+                'nexura-performance', 'nexura-file-snapshots', 'nexura-logs',
                 'nexura-rest-security', 'nexura-plugin-cleaner', 'nexura-db-optimizer'
             ],
             'backup_nonce'   => wp_create_nonce( 'nexura_db_backup' )
@@ -493,6 +681,12 @@ class Admin {
             $file = NEXURA_PLUGIN_DIR . 'admin/views/' . $view . '.php';
         }
 
+        // If Pro plugin is active and has its own view registered via add_submenu_page,
+        // skip the Free version's view to prevent double rendering.
+        if ( 'security-headers' === $view && nexura_is_pro() ) {
+            return;
+        }
+
         if ( file_exists( $file ) ) {
             require NEXURA_PLUGIN_DIR . 'admin/views/partials/header.php';
             require $file;
@@ -529,6 +723,7 @@ class Admin {
         $critical_issues = 0;
         $scanned_files = (int) get_option( 'NEXURA_scan_total', 0 );
         
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
         if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) {
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
             $total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
@@ -583,7 +778,8 @@ class Admin {
                     <p style="font-size: 14px; color: #3c434a;">
                         <?php 
                         printf(
-                            wp_kses_post( __( 'Take a look at the <strong>%d issues</strong> on the <a href="%s">Nexura Security</a> screen.', 'nexura-security' ) ),
+                            /* translators: 1: Number of issues, 2: URL to Nexura Security screen */
+                            wp_kses_post( __( 'Take a look at the <strong>%1$d issues</strong> on the <a href="%2$s">Nexura Security</a> screen.', 'nexura-security' ) ),
                             (int) $total_issues,
                             esc_url( admin_url( 'admin.php?page=nexura-issues-detected' ) )
                         );
@@ -596,7 +792,8 @@ class Admin {
                     <p style="font-size: 14px; color: #3c434a;">
                         <?php 
                         printf(
-                            wp_kses_post( __( 'You have <strong>%s files scanned</strong> on the <a href="%s">Nexura Security</a> screen.', 'nexura-security' ) ),
+                            /* translators: 1: Number of files scanned, 2: URL to Nexura Security screen */
+                            wp_kses_post( __( 'You have <strong>%1$s files scanned</strong> on the <a href="%2$s">Nexura Security</a> screen.', 'nexura-security' ) ),
                             esc_html( number_format_i18n( $scanned_files ) ),
                             esc_url( admin_url( 'admin.php?page=nexura' ) )
                         );
@@ -640,8 +837,9 @@ class Admin {
         $table_name = $wpdb->prefix . 'NEXURA_scan_results';
         $total_issues = 0;
         
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
         if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) {
-            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
             $total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
         }
 
@@ -674,8 +872,9 @@ class Admin {
         $table_name = $wpdb->prefix . 'NEXURA_scan_results';
         $issues_count = 0;
 
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
         if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) {
-            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
             $issues_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
         }
 

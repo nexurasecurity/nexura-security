@@ -22,6 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         </div>
     </div>
     
+    <?php if ( ! nexura_is_pro() ) : ?>
     <!-- Pro Upgrade Modal (Premium Redesign) -->
     <div id="nexura-pro-upgrade-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(2, 6, 23, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 99999; align-items: center; justify-content: center; animation: nexuraModalFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);">
 
@@ -45,4 +46,5 @@ if ( ! defined( 'ABSPATH' ) ) {
             </div>
         </div>
     </div>
+    <?php endif; ?>
 </div><!-- .nexura-wrap -->

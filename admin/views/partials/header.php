@@ -14,7 +14,7 @@ if ( $NEXURA_current_page === 'nexura' ) {
 
 // Get high issues count for badge
 global $wpdb;
-$NEXURA_total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_scan_results" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+$NEXURA_total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}NEXURA_scan_results" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 ?>
 
 <div class="wrap nexura-wrap">
@@ -67,6 +67,9 @@ $NEXURA_total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefi
                 <span class="nexura-nav-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></span> Hardening
             </a>
 
+            <!-- Free Extensions Hook -->
+            <?php do_action( 'nexura_free_sidebar_menus', $NEXURA_current_slug ); ?>
+
             <a href="<?php echo esc_url( admin_url( 'admin.php?page=nexura-google-safe-browsing' ) ); ?>" class="nexura-nav-item <?php echo $NEXURA_current_slug === 'google-safe-browsing' ? 'active' : ''; ?>">
                 <span class="nexura-nav-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg></span> Google Safe Browsing
             </a>
@@ -84,15 +87,27 @@ $NEXURA_total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefi
             <a href="<?php echo esc_url( admin_url( 'admin.php?page=nexura-settings' ) ); ?>" class="nexura-nav-item <?php echo $NEXURA_current_slug === 'settings' ? 'active' : ''; ?>">
                 <span class="nexura-nav-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></span> Settings
             </a>
-          
-            <a href="<?php echo esc_url( admin_url( 'admin.php?page=nexura-about' ) ); ?>" class="nexura-nav-item <?php echo $NEXURA_current_slug === 'about' ? 'active' : ''; ?>">
-                <span class="nexura-nav-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></span> About
+            <div class="nexura-sidebar-label" style="margin-top: 12px;">Audits & Logs</div>
+
+            <a href="<?php echo esc_url( admin_url( 'admin.php?page=nexura-db-security' ) ); ?>" class="nexura-nav-item <?php echo $NEXURA_current_slug === 'db-security' ? 'active' : ''; ?>">
+                <span class="nexura-nav-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg></span> DB Security
+            </a>
+
+            <a href="<?php echo esc_url( admin_url( 'admin.php?page=nexura-cron-audit' ) ); ?>" class="nexura-nav-item <?php echo $NEXURA_current_slug === 'cron-audit' ? 'active' : ''; ?>">
+                <span class="nexura-nav-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></span> Cron Audit
+            </a>
+
+            <a href="<?php echo esc_url( admin_url( 'admin.php?page=nexura-audit-logs' ) ); ?>" class="nexura-nav-item <?php echo $NEXURA_current_slug === 'audit-logs' ? 'active' : ''; ?>">
+                <span class="nexura-nav-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></span> Audit Logs
             </a>
 
             <!-- PRO Features Hook -->
             <?php do_action( 'nexura_pro_sidebar_menus', $NEXURA_current_slug ); ?>
 
             <div style="margin-top: 20px;"></div>
+             <a href="<?php echo esc_url( admin_url( 'admin.php?page=nexura-about' ) ); ?>" class="nexura-nav-item <?php echo $NEXURA_current_slug === 'about' ? 'active' : ''; ?>">
+                <span class="nexura-nav-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></span> About
+            </a>
 
             <!-- Support & Upgrade -->
             <a href="<?php echo esc_url( admin_url( 'admin.php?page=nexura-contact' ) ); ?>" class="nexura-nav-item <?php echo $NEXURA_current_slug === 'contact' ? 'active' : ''; ?>">
@@ -101,7 +116,7 @@ $NEXURA_total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefi
             <a href="https://wordpress.org/support/plugin/nexura-security/" class="nexura-nav-item" target="_blank">
                 <span class="nexura-nav-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"></path></svg></span> Support Forum
             </a>
-            <?php if ( function_exists('nexurasec_fs') && nexurasec_fs()->is_pricing_page_visible() ) : ?>
+            <?php if ( ( ! function_exists('nexura_is_pro') || ! nexura_is_pro() ) && function_exists('nexurasec_fs') && nexurasec_fs()->is_pricing_page_visible() ) : ?>
             <a href="<?php echo esc_url( function_exists('nexurasec_fs') ? nexurasec_fs()->get_upgrade_url() : '' ); ?>" class="nexura-nav-item" style="color: #10b981; font-weight: 600;">
                 <span class="nexura-nav-icon"><svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></span> Upgrade ➤
             </a>
@@ -110,5 +125,8 @@ $NEXURA_total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefi
 
         <!-- ===== MAIN CONTENT ===== -->
         <main class="nexura-main">
-            <!-- Hidden H2 to anchor WordPress/Freemius notices at the top of the main area -->
-            <h2 style="display: none; margin: 0; padding: 0;"></h2>
+            <!-- Notice Trap: WordPress JS moves admin notices after the first H2.
+                 This container captures them and hides everything inside. -->
+            <div style="height:0;max-height:0;overflow:hidden;padding:0;margin:0;line-height:0;">
+                <h2></h2>
+            </div>

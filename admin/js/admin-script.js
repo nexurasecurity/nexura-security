@@ -107,7 +107,7 @@ jQuery(document).ready(function($) {
                     $stats.html(initStatsHtml);
                 }
 
-                this.processStep();
+                setTimeout(() => this.processStep(), 1000);
             }
         },
 
@@ -138,6 +138,9 @@ jQuery(document).ready(function($) {
             var scanData = {};
             if ($('#nexura-cpanel-scan').length) {
                 scanData.cpanel = $('#nexura-cpanel-scan').is(':checked') ? 1 : 0;
+            }
+            if ($('#nexura-force-full-scan').length) {
+                scanData.full = $('#nexura-force-full-scan').is(':checked') ? 1 : 0;
             }
 
             $.ajax({
@@ -230,9 +233,9 @@ jQuery(document).ready(function($) {
                             var html = '';
                             for (var i = 0; i < data.recent_files.length; i++) {
                                 var isLast = (i === data.recent_files.length - 1);
-                                html += '<div style="display: flex; align-items: center; gap: 8px; padding: 2px 0;' + (isLast ? ' color: var(--nexura-accent-light); font-weight: 600;' : '') + '">';
-                                html += '<span style="color: ' + (isLast ? 'var(--nexura-green)' : 'var(--nexura-text-muted)') + ';">' + (isLast ? '&#9654;' : '&#10003;') + '</span>';
-                                html += '<span>' + data.recent_files[i] + '</span>';
+                                html += '<div style="display: flex; align-items: center; gap: 8px; padding: 2px 0; overflow: hidden;' + (isLast ? ' color: var(--nexura-accent-light); font-weight: 600;' : '') + '">';
+                                html += '<span style="flex-shrink: 0; color: ' + (isLast ? 'var(--nexura-green)' : 'var(--nexura-text-muted)') + ';">' + (isLast ? '&#9654;' : '&#10003;') + '</span>';
+                                html += '<span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; max-width: 90%;" title="' + data.recent_files[i] + '">' + data.recent_files[i] + '</span>';
                                 html += '</div>';
                             }
                             $fileList.html(html);
@@ -242,7 +245,10 @@ jQuery(document).ready(function($) {
                         }
                         
                         if (data.status === 'processing') {
-                            this.processStep();
+                            // ⏳ CPU Breathing Gap: wait 1.5s before next step
+                            // This prevents 100% sustained CPU usage on shared hosting
+                            // by giving the server time to recover between PHP executions.
+                            setTimeout(() => this.processStep(), 1500);
                         } else if (data.status === 'completed') {
                             this.finishScan(data);
                         }

@@ -36,7 +36,13 @@ class File_Integrity {
      */
     public function generate_baseline() {
         $hashes = [];
-        $directories = [ ABSPATH . 'wp-admin', ABSPATH . 'wp-includes', WP_PLUGIN_DIR ];
+        $directories = [ 
+            ABSPATH . 'wp-admin', 
+            ABSPATH . 'wp-includes', 
+            WP_PLUGIN_DIR,
+            get_theme_root(),
+            defined( 'WPMU_PLUGIN_DIR' ) ? WPMU_PLUGIN_DIR : WP_CONTENT_DIR . '/mu-plugins'
+        ];
 
         foreach ( $directories as $dir ) {
             if ( is_dir( $dir ) ) {
@@ -48,7 +54,9 @@ class File_Integrity {
         $root_files = array_merge(
             glob( ABSPATH . '*.php' ) ?: [],
             glob( ABSPATH . '*.js' ) ?: [],
-            glob( ABSPATH . '.htaccess' ) ?: []
+            glob( ABSPATH . '.htaccess' ) ?: [],
+            // Drop-ins like advanced-cache.php, object-cache.php, db.php
+            glob( WP_CONTENT_DIR . '/*.php' ) ?: []
         );
         if ( is_array( $root_files ) ) {
             foreach ( $root_files as $file ) {
@@ -105,9 +113,13 @@ class File_Integrity {
         }
 
         $current_hashes = [];
-        // Note to WP Review Team: ABSPATH and WP_PLUGIN_DIR are used intentionally here
-        // to scan the broader WordPress installation for file integrity, not to locate our own plugin assets.
-        $directories = [ ABSPATH . 'wp-admin', ABSPATH . 'wp-includes', WP_PLUGIN_DIR ];
+        $directories = [ 
+            ABSPATH . 'wp-admin', 
+            ABSPATH . 'wp-includes', 
+            WP_PLUGIN_DIR,
+            get_theme_root(),
+            defined( 'WPMU_PLUGIN_DIR' ) ? WPMU_PLUGIN_DIR : WP_CONTENT_DIR . '/mu-plugins'
+        ];
 
         foreach ( $directories as $dir ) {
             if ( is_dir( $dir ) ) {
@@ -118,7 +130,9 @@ class File_Integrity {
         $root_files = array_merge(
             glob( ABSPATH . '*.php' ) ?: [],
             glob( ABSPATH . '*.js' ) ?: [],
-            glob( ABSPATH . '.htaccess' ) ?: []
+            glob( ABSPATH . '.htaccess' ) ?: [],
+            // Drop-ins like advanced-cache.php, object-cache.php, db.php
+            glob( WP_CONTENT_DIR . '/*.php' ) ?: []
         );
         if ( is_array( $root_files ) ) {
             foreach ( $root_files as $file ) {
@@ -148,6 +162,26 @@ class File_Integrity {
             if ( ! isset( $baseline[ $file ] ) ) {
                 $results['added'][] = $file;
             }
+        }
+
+        // Save history if there are changes
+        if ( ! empty( $results['added'] ) || ! empty( $results['modified'] ) || ! empty( $results['deleted'] ) ) {
+            $history = get_option( 'NEXURA_fim_history', [] );
+            if ( ! is_array( $history ) ) {
+                $history = [];
+            }
+            array_unshift( $history, [
+                'time'     => current_time( 'mysql' ),
+                'added'    => count( $results['added'] ),
+                'modified' => count( $results['modified'] ),
+                'deleted'  => count( $results['deleted'] )
+            ] );
+            
+            // Keep only the last 50 entries
+            if ( count( $history ) > 50 ) {
+                $history = array_slice( $history, 0, 50 );
+            }
+            update_option( 'NEXURA_fim_history', $history );
         }
 
         return $results;

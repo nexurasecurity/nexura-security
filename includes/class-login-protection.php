@@ -12,11 +12,12 @@ if ( ! defined( 'ABSPATH' ) ) {
  */
 class Login_Protection {
 
-    private $max_attempts = 5;
-    private $lockout_duration = 1800; // 30 minutes
+    private $max_attempts;
+    private $lockout_duration;
 
     public function __construct() {
-        // Hooks moved to init() for architectural consistency and proper initialization lifecycle.
+        $this->max_attempts = (int) get_option( 'NEXURA_brute_force_max_attempts', 5 );
+        $this->lockout_duration = (int) get_option( 'NEXURA_brute_force_lockout', 1800 ); // Default 30 mins
     }
 
     /**
@@ -25,6 +26,8 @@ class Login_Protection {
     public function init() {
         add_filter( 'authenticate', [ $this, 'check_login_attempts' ], 30, 3 );
         add_action( 'wp_login_failed', [ $this, 'log_failed_attempt' ] );
+        add_action( 'xmlrpc_login_error', [ $this, 'log_failed_xmlrpc_attempt' ], 10, 2 );
+        add_filter( 'rest_authentication_errors', [ $this, 'track_rest_auth_failures' ], 999 );
 
         // Custom Login URL hooks
         add_action( 'init', [ $this, 'handle_custom_login_route' ] );
@@ -43,6 +46,18 @@ class Login_Protection {
      */
     public function check_login_attempts( $user, $username, $password ) {
         $ip = $this->get_client_ip();
+
+        // Always allow localhost in local/dev environments — never lock out developer
+        // On a live server, real visitors can never have these IPs, so this is safe either way.
+        $is_local = in_array( $ip, [ '127.0.0.1', '::1' ], true ) && (
+            defined( 'WP_DEBUG' ) && WP_DEBUG ||
+            strpos( site_url(), 'localhost' ) !== false ||
+            strpos( site_url(), '127.0.0.1' ) !== false
+        );
+        if ( $is_local ) {
+            return $user;
+        }
+
         $attempts = get_transient( 'NEXURA_login_attempts_' . $ip );
 
         if ( $attempts !== false && $attempts >= $this->max_attempts ) {
@@ -84,6 +99,57 @@ class Login_Protection {
                 'medium'
             );
         }
+    }
+
+    /**
+     * Records a failed XML-RPC login attempt.
+     */
+    public function log_failed_xmlrpc_attempt( $error, $user ) {
+        // user could be an object or string depending on the exact WP version, just log the attempt
+        $username = is_object($user) ? $user->user_login : (string) $user;
+        $this->log_failed_attempt( $username );
+    }
+
+    /**
+     * Tracks failed REST API authentications.
+     */
+    public function track_rest_auth_failures( $result ) {
+        // If the user is already successfully logged in, don't block them or log failures.
+        if ( is_user_logged_in() || $result === true ) {
+            return $result;
+        }
+        
+        $ip = $this->get_client_ip();
+        
+        // Always allow localhost in local/dev environments
+        $is_local = in_array( $ip, [ '127.0.0.1', '::1' ], true ) && (
+            ( defined( 'WP_DEBUG' ) && WP_DEBUG ) ||
+            strpos( site_url(), 'localhost' ) !== false ||
+            strpos( site_url(), '127.0.0.1' ) !== false
+        );
+        if ( $is_local ) {
+            return $result;
+        }
+
+        if ( is_wp_error( $result ) ) {
+            // Do not log invalid nonces as brute force attacks
+            if ( $result->get_error_code() === 'incorrect_password' || $result->get_error_code() === 'invalid_username' ) {
+                $this->log_failed_attempt( 'rest_api' );
+            }
+        }
+        
+        // Also check if the IP is already locked out to block the request early
+        $ip = $this->get_client_ip();
+        $attempts = get_transient( 'NEXURA_login_attempts_' . $ip );
+        if ( $attempts !== false && $attempts >= $this->max_attempts ) {
+            // Bypass lockout for public tracking endpoint
+            if ( isset( $_SERVER['REQUEST_URI'] ) && strpos( sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ), '/nexura/v1/track' ) !== false ) {
+                return $result;
+            }
+            return new \WP_Error( 'too_many_retries', __( 'Too many failed authentication attempts. Please try again later.', 'nexura-security' ), array( 'status' => 401 ) );
+        }
+
+        return $result;
     }
 
     /**

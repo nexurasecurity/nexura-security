@@ -163,6 +163,9 @@ class Rest_Controller extends WP_REST_Controller {
         if ( $request->has_param( 'cpanel' ) ) {
             update_option( 'NEXURA_scan_cpanel_root', (int) $request->get_param( 'cpanel' ) );
         }
+        if ( $request->has_param( 'full' ) && $request->get_param( 'full' ) ) {
+            update_option( 'NEXURA_last_completed_scan_time', 0, false );
+        }
         $scanner = new Scanner();
         $response = $scanner->init_scan();
         $this->send_json_response( $response );

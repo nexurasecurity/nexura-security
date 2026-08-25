@@ -44,7 +44,7 @@ class Login_Security {
         if ( time() - $last_cleanup > DAY_IN_SECONDS ) {
             global $wpdb;
             $table = $wpdb->prefix . 'NEXURA_recaptcha_logs';
-            $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}NEXURA_recaptcha_logs WHERE timestamp < %s", gmdate( 'Y-m-d H:i:s', strtotime( '-30 days' ) ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+            $wpdb->query( $wpdb->prepare( "DELETE FROM {$wpdb->prefix}NEXURA_recaptcha_logs WHERE timestamp < %s", gmdate( 'Y-m-d H:i:s', strtotime( '-30 days' ) ) ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
             update_option( 'NEXURA_recaptcha_last_cleanup', time() );
         }
     }
@@ -82,6 +82,11 @@ class Login_Security {
      * Hooked on wp_login to check if the user is required to have 2FA.
      */
     public function enforce_2fa_policy( $user_login, $user ) {
+        // Enforcing 2FA is a Pro feature
+        if ( ! function_exists( 'nexura_is_pro' ) || ! nexura_is_pro() ) {
+            return;
+        }
+
         // Skip if IP is allowlisted
         if ( $this->is_ip_allowlisted() ) {
             return;

@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.11] - 2026-08-25
+
+### 🚀 Major New Features
+- **Vulnerability Scanner:** Added automated scanning for known vulnerabilities (CVEs) in installed plugins and themes.
+- **Security Audit Logs:** Comprehensive tracking of user actions, login attempts, and security events with a dedicated UI.
+- **Security Headers Manager:** Implement critical HTTP security headers (HSTS, X-Frame-Options, CSP, X-XSS-Protection) with one click.
+- **Advanced DB Security & Cleanup:** New Safe Cleanup module to optimize the database, remove orphan data, and clear out malicious transients or spam.
+- **Cron Job Auditor:** Monitor and audit WordPress scheduled tasks (Crons) to detect hidden malicious jobs or performance bottlenecks.
+- **Security Score & Reporting:** Get a real-time Security Score based on your site's posture, with actionable hardening recommendations and downloadable reports.
+
+### ⚡ Performance & Core Architecture
+- **Removed Freemius SDK:** Completely decoupled from the Freemius SDK for a leaner, faster, and fully independent architecture.
+- **Cloudflare D1 Integration:** Expanded Nexura Cloud Threat Intelligence with 90,000+ new zero-day and malware signatures via the Cloudflare D1 internal API. Total active signatures now exceed 100,000+.
+- **Zero-Bloat Guarantee:** Removed the bulky local `Yara-Rules` folder to drastically reduce plugin download size. All signature scanning is now routed through the cloud-based API.
+
+### 🛠️ Bug Fixes
+- **Robust Loader:** Fixed a fatal error that occurred when specific plugin files were missing or manually deleted. Added `class_exists` and `file_exists` fallbacks in the plugin loader.
+
+---
+
 ## [1.0.10] - 2026-08-05
 
 ### Security — Critical Hardening (Bulletproof Release)
@@ -26,6 +46,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Minimum stability guarantee: All known vulnerability classes are now patched (Security Score: 98/100).
 - Updated documentation and SEO metadata across `readme.txt`, `README.md`, and `CHANGELOG.md`.
+
+---
+
+## [1.0.9] - 2026-07-21
+
+### Fixed
+- **SEO & Repository:** Resolved WordPress.org directory tag limit constraint.
+- **SEO:** Optimized plugin short description to improve search visibility and user discovery.
+
+---
+
+## [1.0.8] - 2026-07-18
+
+### Changed
+- **Core:** Maintenance release for version synchronization and minor internal stability improvements.
+
+---
+
+## [1.0.7] - 2026-07-18
+
+### Added
+- **UI/UX:** Introduced an interactive admin bar notification system featuring contextual dropdown menus for streamlined security alerts.
+
+---
+
+## [1.0.6] - 2026-07-18
+
+### Added
+- **Engagement:** Integrated a post-publish marketing banner to improve user communication.
+
+### Changed
+- **UI/UX:** Redesigned the primary dashboard widget for better data visualization and improved aesthetic appeal.
 
 ---
 

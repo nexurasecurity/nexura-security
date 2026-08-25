@@ -802,7 +802,9 @@
     border-radius: var(--nexura-radius);
     margin-bottom: 24px;
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
     box-shadow: var(--nexura-shadow);
 }
 
@@ -811,6 +813,12 @@
     font-size: 22px;
     font-weight: 700;
     color: var(--nexura-text-primary);
+}
+
+.nexura-header p {
+    margin: 0;
+    color: var(--nexura-text-muted);
+    font-size: 14px;
 }
 
 .nexura-topbar-title {

@@ -76,45 +76,25 @@ foreach ( $roles as $role_key => $role_data ) {
             </div>
         </div>
 
-        <!-- Section: 2FA Roles -->
+        <!-- Section: 2FA Roles (Pro Features) -->
         <div class="nexura-settings-section">
-            <h3><?php esc_html_e( '2FA Roles Policy', 'nexura-security' ); ?></h3>
+            <h3><?php esc_html_e( '2FA Roles Policy (Pro)', 'nexura-security' ); ?></h3>
             <div class="nexura-settings-section-body">
-                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                    <?php foreach ( $roles as $role_key => $role_data ) : 
-                        $val = isset( $roles_settings[ $role_key ] ) ? $roles_settings[ $role_key ] : 'optional';
+                <?php 
+                if ( has_action( 'nexura_login_security_pro_settings' ) ) {
+                    do_action( 'nexura_login_security_pro_settings', $roles, $roles_settings, $grace_period );
+                } else {
                     ?>
-                    <div style="margin-bottom: 10px;">
-                        <label style="display:block; font-weight: bold; margin-bottom: 5px;"><?php echo esc_html( $role_data['name'] ); ?></label>
-                        <select name="NEXURA_2fa_roles[<?php echo esc_attr( $role_key ); ?>]">
-                            <option value="optional" <?php selected( $val, 'optional' ); ?>><?php esc_html_e( 'Optional', 'nexura-security' ); ?></option>
-                            <option value="required" <?php selected( $val, 'required' ); ?>><?php esc_html_e( 'Required', 'nexura-security' ); ?></option>
-                            <option value="disabled" <?php selected( $val, 'disabled' ); ?>><?php esc_html_e( 'Disabled', 'nexura-security' ); ?></option>
-                        </select>
+                    <div style="background: rgba(99, 102, 241, 0.05); border-left: 4px solid #6366f1; padding: 15px; border-radius: 4px;">
+                        <p style="margin: 0; color: var(--nexura-text-primary);">
+                            <strong><?php esc_html_e( 'Upgrade to Nexura Security Pro', 'nexura-security' ); ?></strong>
+                            <br>
+                            <?php esc_html_e( 'Get advanced features including Role-based 2FA Enforcement, Grace Periods, and "Remember Device" functionality to secure your team without friction.', 'nexura-security' ); ?>
+                        </p>
                     </div>
-                    <?php endforeach; ?>
-                </div>
-
-                <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--nexura-border, rgba(99, 102, 241, 0.15));">
-
-                <table class="nexura-settings-table">
-                    <tr>
-                        <th scope="row"><label for="NEXURA_2fa_grace_period"><?php esc_html_e( 'Grace Period', 'nexura-security' ); ?></label></th>
-                        <td>
-                            <input type="number" name="NEXURA_2fa_grace_period" id="NEXURA_2fa_grace_period" value="<?php echo esc_attr( $grace_period ); ?>" class="small-text"> <?php esc_html_e( 'days', 'nexura-security' ); ?>
-                            <p class="description"><?php esc_html_e( 'For roles that require 2FA, users will have this many days to set it up. Failure to do so will lock them out until they configure 2FA.', 'nexura-security' ); ?></p>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <label class="nexura-switch">
-                                <input type="checkbox" name="NEXURA_allow_remember_device" id="NEXURA_allow_remember_device" value="1" <?php checked( '1', get_option( 'NEXURA_allow_remember_device', '0' ) ); ?>>
-                                <span class="nexura-slider"></span>
-                            </label>
-                            <p class="description"><?php esc_html_e( 'If enabled, users with 2FA enabled may choose to be prompted for a code only once every 30 days per device.', 'nexura-security' ); ?></p>
-                        </td>
-                    </tr>
-                </table>
+                    <?php
+                }
+                ?>
             </div>
         </div>
 
@@ -159,6 +139,29 @@ foreach ( $roles as $role_key => $role_data ) {
                                 <input type="checkbox" name="NEXURA_wc_single_column" id="NEXURA_wc_single_column" value="1" <?php checked( '1', get_option( 'NEXURA_wc_single_column', '1' ) ); ?>>
                                 <span class="nexura-slider"></span>
                             </label>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section: Brute Force Protection -->
+        <div class="nexura-settings-section">
+            <h3><?php esc_html_e( 'Brute Force Protection', 'nexura-security' ); ?></h3>
+            <div class="nexura-settings-section-body">
+                <table class="nexura-settings-table">
+                    <tr>
+                        <th scope="row"><label for="NEXURA_brute_force_max_attempts"><?php esc_html_e( 'Max Login Attempts', 'nexura-security' ); ?></label></th>
+                        <td>
+                            <input type="number" name="NEXURA_brute_force_max_attempts" id="NEXURA_brute_force_max_attempts" value="<?php echo esc_attr( get_option( 'NEXURA_brute_force_max_attempts', '5' ) ); ?>" class="regular-text" style="width: 100px;">
+                            <p class="description"><?php esc_html_e( 'Number of allowed failed attempts before the IP is locked out (Default: 5).', 'nexura-security' ); ?></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th scope="row"><label for="NEXURA_brute_force_lockout"><?php esc_html_e( 'Lockout Duration (seconds)', 'nexura-security' ); ?></label></th>
+                        <td>
+                            <input type="number" name="NEXURA_brute_force_lockout" id="NEXURA_brute_force_lockout" value="<?php echo esc_attr( get_option( 'NEXURA_brute_force_lockout', '1800' ) ); ?>" class="regular-text" style="width: 100px;">
+                            <p class="description"><?php esc_html_e( 'How long an IP is locked out after reaching the max attempts (Default: 1800 seconds / 30 mins).', 'nexura-security' ); ?></p>
                         </td>
                     </tr>
                 </table>

@@ -49,7 +49,7 @@ if ( ! defined( 'ABSPATH' ) ) {
             </h2>
             
             <div style="margin-bottom: 16px;">
-                <h4 style="color: #f3f4f6; margin: 0 0 5px 0; font-size: 15px;">1. Zero Database Bloat</h4>
+                <h4 style="color: #f3f4f6; margin: 0 0 5px 0; font-size: 15px;">1. Designed for low database overhead</h4>
                 <p style="color: var(--nexura-text-secondary); line-height: 1.6; font-size: 14px; margin: 0;">
                     Unlike traditional security plugins that store millions of logs in your WordPress database (making your site extremely slow), Nexura offloads logs to the filesystem or <strong>Cloudflare D1</strong>. Your site remains lightning fast.
                 </p>
@@ -58,12 +58,12 @@ if ( ! defined( 'ABSPATH' ) ) {
             <div style="margin-bottom: 16px;">
                 <h4 style="color: #f3f4f6; margin: 0 0 5px 0; font-size: 15px;">2. No Server Crashes During Scans</h4>
                 <p style="color: var(--nexura-text-secondary); line-height: 1.6; font-size: 14px; margin: 0;">
-                    Other plugins crash large sites because they scan everything in a single PHP execution. Nexura uses an advanced <strong>Micro-Batching Architecture</strong>. We break heavy tasks into small chunks, ensuring zero server overload.
+                    Other plugins crash large sites because they scan everything in a single PHP execution. Nexura uses an advanced <strong>Micro-Batching Architecture</strong>. We break heavy tasks into small chunks, ensuring low performance overhead.
                 </p>
             </div>
 
             <div>
-                <h4 style="color: #f3f4f6; margin: 0 0 5px 0; font-size: 15px;">3. Enterprise-Grade, Yet Lightweight</h4>
+                <h4 style="color: #f3f4f6; margin: 0 0 5px 0; font-size: 15px;">3. Advanced, Yet Lightweight</h4>
                 <p style="color: var(--nexura-text-secondary); line-height: 1.6; font-size: 14px; margin: 0;">
                     Nexura is built specifically to provide the highest level of security without the clunky, resource-heavy features you don't need. It's security that actually scales with your traffic.
                 </p>
@@ -72,12 +72,12 @@ if ( ! defined( 'ABSPATH' ) ) {
     </div>
 </div>
 
-<?php if ( ! ( defined('NEXURA_PRO_VERSION') && function_exists('nexurasec_fs') && nexurasec_fs()->can_use_premium_code() ) ) : ?>
+<?php if ( ! nexura_is_pro() ) : ?>
 <div class="nexura-card nexura-fade-in" style="margin-top: 30px; border: 1px solid rgba(236, 72, 153, 0.5); background: linear-gradient(145deg, rgba(236, 72, 153, 0.05) 0%, rgba(15, 23, 42, 0.4) 100%);">
     <div style="text-align: center; margin-bottom: 25px;">
         <h2 style="font-size: 24px; color: #ec4899; margin: 0 0 10px 0;">👑 Why Upgrade to Nexura Pro?</h2>
         <p style="color: var(--nexura-text-secondary); font-size: 15px; max-width: 650px; margin: 0 auto;">
-            The free version provides exceptional basic security. However, if you are running a serious business, eCommerce store, or high-traffic website, Nexura Pro provides the ultimate peace of mind with enterprise-grade automated protection.
+            The free version provides exceptional basic security. However, if you are running a serious business, eCommerce store, or high-traffic website, Nexura Pro provides the ultimate peace of mind with robust automated protection.
         </p>
     </div>
 

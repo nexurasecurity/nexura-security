@@ -3,7 +3,7 @@
  * Plugin Name: Nexura Security
  * Plugin URI: https://wordpress.org/plugins/nexura-security/
  * Description: Enterprise-level WordPress security plugin with malware scanning, file integrity monitoring, vulnerability auditing, and Google Safe Browsing integration.
- * Version: 1.0.10
+ * Version: 1.0.11
  * Author: Nexura Security
  * Author URI: https://profiles.wordpress.org/nexurasecurity/
  * License: GPL-2.0+
@@ -24,7 +24,7 @@ if ( ! function_exists( 'nexurasec_fs' ) ) {
 
         if ( ! isset( $nexurasec_fs ) ) {
             // Include Freemius SDK.
-            require_once dirname( __FILE__ ) . '/freemius/start.php';
+            require_once dirname( __FILE__ ) . '/vendor/freemius/start.php';
 
             $nexurasec_fs = fs_dynamic_init( array(
                 'id'                  => '32691',
@@ -38,7 +38,9 @@ if ( ! function_exists( 'nexurasec_fs' ) ) {
                 'is_org_compliant'    => true,
                 'menu'                => array(
                     'slug'           => 'nexura',
-                    'support'        => false,
+                    'support'        => true,
+                    'contact'        => true,
+                    'position'       => 3,
                 ),
             ) );
         }
@@ -54,7 +56,9 @@ if ( ! function_exists( 'nexurasec_fs' ) ) {
 // phpcs:enable
 
 // Define Constants
-define( 'NEXURA_VERSION', '1.0.10' );
+if ( ! defined( 'NEXURA_VERSION' ) ) {
+    define( 'NEXURA_VERSION', '1.0.11' );
+}
 define( 'NEXURA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'NEXURA_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'NEXURA_PLUGIN_BASENAME', plugin_basename( __FILE__ ) );
@@ -94,15 +98,25 @@ add_filter( 'pre_option_NEXURA_subscription_plan', function( $value ) {
 function nexura_is_pro() {
     static $is_pro = null;
     if ( $is_pro === null ) {
+        $is_pro_active = false;
+        
+        // Check if Free plugin has premium plan active
+        if ( function_exists('nexurasec_fs') && nexurasec_fs()->can_use_premium_code() ) {
+            $is_pro_active = true;
+        }
+        
+        // Check if Pro plugin (Add-on) is installed and its license is active
+        if ( function_exists('nsp_fs') && nsp_fs()->can_use_premium_code() ) {
+            $is_pro_active = true;
+        }
+
         // Only return true if:
         // 1. Pro plugin constant is defined (Pro is physically active)
-        // 2. Freemius SDK is loaded
-        // 3. Freemius license is valid
-        // 4. Pro plugin core file exists (not a stub)
+        // 2. Either Free or Pro plugin has a valid premium license
+        // 3. Pro plugin core file exists (not a stub)
         $is_pro = (
             defined('NEXURA_PRO_VERSION') &&
-            function_exists('nexurasec_fs') &&
-            nexurasec_fs()->can_use_premium_code() &&
+            $is_pro_active &&
             file_exists( WP_PLUGIN_DIR . '/nexura-security-pro/includes/class-pro-file-manager.php' )
         );
     }
@@ -145,7 +159,7 @@ function nexurasec_fs_uninstall() {
 
     if ( get_option( 'NEXURA_delete_data_on_uninstall', '0' ) === '1' ) {
         // 1. Delete all options
-        $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'NEXURA_%'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
+        $wpdb->query( "DELETE FROM {$wpdb->options} WHERE option_name LIKE 'NEXURA_%'" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         
         // 2. Drop all custom tables
         $tables = [
@@ -215,81 +229,3 @@ register_deactivation_hook( __FILE__, function() {
     }
 } );
 
-
-// BULLETPROOF PRO AUTOLOADER (Safeguard against manual Pro plugin reverts)
-add_action('plugins_loaded', function() {
-    spl_autoload_register(function ($class) {
-        if (strpos($class, 'Nexura_Security\\') === 0 || $class === 'Nexura_Cloudflare_Manager' || $class === 'Nexura_Virtual_Patcher') {
-            $map = [
-                'Nexura_Security\AI_Assistant_Settings' => 'NexuraSys\Ai\AI_Assistant_Settings',
-                'Nexura_Security\AI_Auto_Fixer' => 'NexuraSys\Ai\AI_Auto_Fixer',
-                'Nexura_Security\AI_Engine' => 'NexuraSys\Ai\AI_Engine',
-                'Nexura_Security\Advanced_Scanner' => 'NexuraSys\Scanner\Advanced_Scanner',
-                'Nexura_Security\Pro_Scanner' => 'NexuraSys\Scanner\Pro_Scanner',
-                'Nexura_Security\Advanced_Malware_Detection' => 'NexuraSys\Scanner\Advanced_Malware_Detection',
-                'Nexura_Security\Scan_Session' => 'NexuraSys\Scanner\Scan_Session',
-                'Nexura_Security\Asset_Scanner' => 'NexuraSys\Scanner\Asset_Scanner',
-                'Nexura_Security\Pro_FIM' => 'NexuraSys\Scanner\Pro_FIM',
-                'Nexura_Security\Core_Restorer' => 'NexuraSys\Scanner\Core_Restorer',
-                'Nexura_Security\Snapshot_Manager' => 'NexuraSys\Scanner\Snapshot_Manager',
-                'Nexura_Security\Quarantine' => 'NexuraSys\Scanner\Quarantine',
-                'Nexura_Security\Learning_DB' => 'NexuraSys\Scanner\Learning_DB',
-                'Nexura_Security\Pro\Learning_Manager' => 'NexuraSys\Scanner\Learning_Manager',
-                'Nexura_Security\Entropy_Analyzer' => 'NexuraSys\Scanner\Entropy_Analyzer',
-                'Nexura_Security\Allowlist_Engine' => 'NexuraSys\Scanner\Allowlist_Engine',
-                'Nexura_Security\Confidence_Engine' => 'NexuraSys\Scanner\Confidence_Engine',
-                'Nexura_Security\WAF_Dashboard' => 'NexuraSys\Firewall\WAF_Dashboard',
-                'Nexura_Security\Edge_Firewall_Settings' => 'NexuraSys\Firewall\Edge_Firewall_Settings',
-                'Nexura_Cloudflare_Manager' => 'NexuraSys\Firewall\Cloudflare_Manager',
-                'Nexura_Security\Server_Rule_Manager' => 'NexuraSys\Firewall\Server_Rule_Manager',
-                'Nexura_Security\Threat_Intel_Feed' => 'NexuraSys\Firewall\Threat_Intel_Feed',
-                'Nexura_Security\Database_IDS' => 'NexuraSys\Firewall\Database_IDS',
-                'Nexura_Security\ACME_Client' => 'NexuraSys\Firewall\ACME_Client',
-                'Nexura_Security\SSL_Manager' => 'NexuraSys\Firewall\SSL_Manager',
-                'Nexura_Virtual_Patcher' => 'NexuraSys\Firewall\Virtual_Patcher',
-                'Nexura_Security\DB_Optimizer' => 'NexuraSys\Optimization\DB_Optimizer',
-                'Nexura_Security\Performance_Audit' => 'NexuraSys\Optimization\Performance_Audit',
-                'Nexura_Security\Performance_Stats' => 'NexuraSys\Optimization\Performance_Stats',
-                'Nexura_Security\Cleanup_Bin' => 'NexuraSys\Optimization\Cleanup_Bin',
-                'Nexura_Security\Media_Cleaner' => 'NexuraSys\Optimization\Media_Cleaner',
-                'Nexura_Security\Plugin_Conflict_Cleaner' => 'NexuraSys\Optimization\Plugin_Conflict_Cleaner',
-                'Nexura_Security\Security_Headers' => 'NexuraSys\Hardening\Security_Headers',
-                'Nexura_Security\Server_Lock' => 'NexuraSys\Hardening\Server_Lock',
-                'Nexura_Security\REST_Security' => 'NexuraSys\Hardening\REST_Security',
-                'Nexura_Security\WooCommerce_Security' => 'NexuraSys\Hardening\WooCommerce_Security',
-                'Nexura_Security\Visitor_Tracker' => 'NexuraSys\Hardening\Visitor_Tracker',
-                'Nexura_Security\Vulnerability_Audit' => 'NexuraSys\Hardening\Vulnerability_Audit',
-                'Nexura_Security\Integrity_Guard' => 'NexuraSys\Hardening\Integrity_Guard',
-                'Nexura_Security\Privacy_Whitelabel' => 'NexuraSys\Privacy\Privacy_Whitelabel',
-                'Nexura_Security\Login_URL' => 'NexuraSys\Privacy\Login_URL',
-                'Nexura_Security\Trust_Badge' => 'NexuraSys\Privacy\Trust_Badge',
-                'Nexura_Security\Pro_File_Manager' => 'NexuraSys\Admin\Pro_File_Manager',
-                'Nexura_Security\Activity_Log' => 'NexuraSys\Admin\Activity_Log',
-                'Nexura_Security\Email_Alerts' => 'NexuraSys\Admin\Email_Alerts',
-                'Nexura_Security\Shortcodes' => 'NexuraSys\Admin\Shortcodes',
-                'Nexura_Security\Logger' => 'NexuraSys\Core\Logger',
-                'Nexura_Security\Pro_Logs' => 'NexuraSys\Core\Pro_Logs',
-                'Nexura_Security\License_Verifier' => 'NexuraSys\Core\License_Verifier',
-                'Nexura_Security\Remote_Features' => 'NexuraSys\Core\Remote_Features',
-                'Nexura_Security\Third_Party_Audit' => 'NexuraSys\Core\Third_Party_Audit'
-            ];
-            
-            if (isset($map[$class])) {
-                $target = $map[$class];
-                
-                // Directly require the stealth file if we know its path mapping
-                $parts = explode('\\', $target);
-                $cat = $parts[1];
-                $basename = $parts[2];
-                $file = dirname(__DIR__) . '/nexura-security-pro/vendor/nexura-sys/src/' . $cat . '/' . $basename . '.php';
-                
-                if (file_exists($file)) {
-                    require_once $file;
-                    if (class_exists($target)) {
-                        class_alias($target, $class);
-                    }
-                }
-            }
-        }
-    }, true, true);
-}, 1); // priority 1 to run before everything else

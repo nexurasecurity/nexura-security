@@ -53,28 +53,76 @@ class DB_Scanner {
     }
 
     /**
-     * Scans options table for malicious redirects.
+     * Scans options table for malicious redirects and injected scripts.
      */
     public function scan_malicious_options() {
         global $wpdb;
         $findings = [];
 
+        // Check common site URLs for redirects
         $options_to_check = ['siteurl', 'home'];
         foreach ( $options_to_check as $opt ) {
             $val = get_option( $opt );
-            // A basic regex for suspicious TLDs or known malicious patterns
-            if ( preg_match( '/(?:spam|phishing|malware|xyz|click|redirect|ru|cn|bit|tk|ml|ga)/i', $val ) ) {
-                // To avoid false positives on legitimate .ru/.cn domains, we keep risk at Medium unless it's very obvious
-                $risk = preg_match( '/(?:spam|phishing|malware)/i', $val ) ? 'High' : 'Medium';
-                
+            
+            // Only flag if siteurl/home points to a DIFFERENT domain than the current server
+            // This prevents false positives on domains that happen to contain short TLD strings (ga, ml, ru etc.)
+            $current_host = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+            $stored_host  = wp_parse_url( $val, PHP_URL_HOST );
+            
+            $is_different_domain = $stored_host && $current_host && strtolower( $stored_host ) !== strtolower( $current_host );
+            
+            // Also flag known high-confidence malware domains/patterns regardless of host match
+            $has_malware_keyword = (bool) preg_match( '/(?:spam|phishing|malware|c99|r57|backdoor|webshell)/i', $val );
+            
+            if ( $is_different_domain || $has_malware_keyword ) {
+                $risk = $has_malware_keyword ? 'High' : 'Medium';
                 $findings[] = [
                     'pattern'     => 'Malicious Redirect in "' . $opt . '"',
                     'risk'        => $risk,
-                    'description' => 'The ' . $opt . ' option points to a potentially malicious domain.',
-                    'confidence'  => 80,
+                    'description' => 'The ' . $opt . ' option points to a different domain (' . esc_html( $stored_host ?? $val ) . ') which may indicate a redirect hijack.',
+                    'confidence'  => 85,
                     'line_number' => 0
                 ];
             }
+        }
+
+        // Check for scripts injected into options (like active_plugins or widget_text)
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $suspicious_options = $wpdb->get_results( "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name NOT LIKE '\_transient%' AND (option_value LIKE '%<script%' OR option_value LIKE '%eval(%')" );
+        
+        foreach ( $suspicious_options as $opt ) {
+            if ( preg_match( '/(<script.*?>.*?<\/script>|eval\s*\()/is', $opt->option_value ) ) {
+                $findings[] = [
+                    'pattern'     => 'Injected Script in Option: ' . $opt->option_name,
+                    'risk'        => 'High',
+                    'description' => 'Suspicious JS or PHP execution code found in database option.',
+                    'confidence'  => 85,
+                    'line_number' => 0
+                ];
+            }
+        }
+
+        return $findings;
+    }
+
+    /**
+     * Scans posts and pages for malicious iframes and injected JS.
+     */
+    public function scan_posts_for_injections() {
+        global $wpdb;
+        $findings = [];
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $suspicious_posts = $wpdb->get_results( "SELECT ID, post_title, post_type FROM {$wpdb->posts} WHERE post_status = 'publish' AND (post_content LIKE '%<script%' OR post_content LIKE '%<iframe%' OR post_content LIKE '%eval(%')" );
+
+        foreach ( $suspicious_posts as $post ) {
+            $findings[] = [
+                'pattern'     => 'Injected Code in ' . ucfirst( $post->post_type ) . ' (ID: ' . $post->ID . ')',
+                'risk'        => 'High',
+                'description' => 'Suspicious <script>, <iframe>, or eval() found in the content of "' . esc_html( $post->post_title ) . '".',
+                'confidence'  => 85,
+                'line_number' => 0
+            ];
         }
 
         return $findings;
@@ -87,6 +135,7 @@ class DB_Scanner {
         $findings = [];
         $findings = array_merge( $findings, $this->scan_hidden_admins() );
         $findings = array_merge( $findings, $this->scan_malicious_options() );
+        $findings = array_merge( $findings, $this->scan_posts_for_injections() );
         return $findings;
     }
 }

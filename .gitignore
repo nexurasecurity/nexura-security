@@ -93,3 +93,8 @@ secrets.json
 nexura-security-pro/
 /nexura-quarantine/
 /nexura-logs/
+
+# Runtime-generated signature cache files (fetched from Cloudflare D1 at runtime)
+# These are large (5MB+) and trigger antivirus on hosting uploads — do NOT commit.
+includes/signatures/chunk_*.json
+includes/response.json

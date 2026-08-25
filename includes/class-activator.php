@@ -87,11 +87,45 @@ class Activator {
             KEY ip_address (ip_address)
         ) $charset_collate;";
 
+        $table_audit_logs = $wpdb->prefix . 'NEXURA_audit_logs';
+        $sql_audit_logs = "CREATE TABLE $table_audit_logs (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            user_id bigint(20) DEFAULT 0 NOT NULL,
+            username varchar(60) NOT NULL,
+            event_type varchar(50) NOT NULL,
+            severity varchar(20) NOT NULL,
+            message text NOT NULL,
+            ip_address varchar(45) NOT NULL,
+            timestamp datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            PRIMARY KEY  (id),
+            KEY user_id (user_id),
+            KEY event_type (event_type)
+        ) $charset_collate;";
+
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta( $sql );
         dbDelta( $sql_queue );
         dbDelta( $sql_recaptcha );
         dbDelta( $sql_asset_scan );
         dbDelta( $sql_attack_logs );
+        dbDelta( $sql_audit_logs );
+
+        // Record install date for Rate Us notice
+        Rate_Us_Notice::record_install_date();
+
+        // Automatic Cleanup: Remove any old false positive database entries from scan results
+        $table_scans = $wpdb->prefix . 'NEXURA_scan_results';
+        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_scans ) ) === $table_scans ) {
+            $wpdb->query(
+                "DELETE FROM {$table_scans} WHERE file_path LIKE 'db_scan:%' AND (
+                    pattern LIKE '%Malicious Redirect%'
+                    OR pattern LIKE '%: domain%'
+                    OR pattern LIKE '%PoetRat%'
+                )"
+            );
+            $remaining = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_scans}" );
+            update_option( 'NEXURA_scan_issues', $remaining, false );
+            wp_cache_delete( 'nexura_scan_counts', 'nexura' );
+        }
     }
 }

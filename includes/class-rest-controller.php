@@ -133,7 +133,7 @@ class Rest_Controller extends WP_REST_Controller {
      * @return bool|\WP_Error
      */
     public function check_permissions() {
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! \Nexura_Security::can_manage_security() ) {
             return new \WP_Error( 'rest_forbidden', esc_html__( 'You cannot view this resource.', 'nexura-security' ), [ 'status' => 403 ] );
         }
         return true;
@@ -165,6 +165,9 @@ class Rest_Controller extends WP_REST_Controller {
         }
         if ( $request->has_param( 'full' ) && $request->get_param( 'full' ) ) {
             update_option( 'NEXURA_last_completed_scan_time', 0, false );
+        }
+        if ( $request->has_param( 'ai_scan' ) ) {
+            update_option( 'NEXURA_scan_ai_active', (int) $request->get_param( 'ai_scan' ) );
         }
         $scanner = new Scanner();
         $response = $scanner->init_scan();
@@ -274,7 +277,7 @@ class Rest_Controller extends WP_REST_Controller {
      */
     public function vuln_run_audit( $request ) {
         if ( ! class_exists( '\Nexura_Security\Vulnerability_Audit' ) ) {
-            return new \WP_Error( 'pro_required', 'Vulnerability Audit requires Pro.', [ 'status' => 403 ] );
+            return new \WP_Error( 'pro_required', 'Vulnerability Audit class file not found.', [ 'status' => 403 ] );
         }
         $audit = new Vulnerability_Audit();
         $response = $audit->run_audit();
@@ -286,7 +289,7 @@ class Rest_Controller extends WP_REST_Controller {
      */
     public function vuln_update_all( $request ) {
         if ( ! class_exists( '\Nexura_Security\Vulnerability_Audit' ) ) {
-            return new \WP_Error( 'pro_required', 'Auto-Updating vulnerabilities requires Pro.', [ 'status' => 403 ] );
+            return new \WP_Error( 'pro_required', 'Vulnerability Audit class file not found.', [ 'status' => 403 ] );
         }
         $audit = new Vulnerability_Audit();
         $response = $audit->update_all();
@@ -301,7 +304,7 @@ class Rest_Controller extends WP_REST_Controller {
      */
     public function third_party_run_audit( $request ) {
         if ( ! class_exists( '\Nexura_Security\Third_Party_Audit' ) ) {
-            return new \WP_Error( 'pro_required', 'Third Party Audit requires Pro.', [ 'status' => 403 ] );
+            return new \WP_Error( 'pro_required', 'Third Party Audit class file not found.', [ 'status' => 403 ] );
         }
         $audit = new Third_Party_Audit();
         $response = $audit->scan_content();
@@ -313,7 +316,7 @@ class Rest_Controller extends WP_REST_Controller {
      */
     public function performance_run_audit( $request ) {
         if ( ! class_exists( '\Nexura_Security\Performance_Audit' ) ) {
-            return new \WP_Error( 'pro_required', 'Performance Audit requires Pro.', [ 'status' => 403 ] );
+            return new \WP_Error( 'pro_required', 'Performance Audit class file not found.', [ 'status' => 403 ] );
         }
         $audit = new Performance_Audit();
         $response = $audit->run_audit();
@@ -322,3 +325,4 @@ class Rest_Controller extends WP_REST_Controller {
 
 
 }
+

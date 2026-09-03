@@ -1,9 +1,9 @@
 === Nexura Security — Malware Scanner, Firewall, 2FA & WordPress Security ===
-Contributors: nexurasecurity
+Contributors: nexurasecurity, freemius
 Tags: security, malware scanner, firewall, two factor authentication, brute force protection
 Requires at least: 5.8
 Tested up to: 7.0.1
-Stable tag: 1.0.11
+Stable tag: 1.0.14
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -105,7 +105,7 @@ Monitors your SSL certificate health and enforces HTTPS redirects to prevent mix
 * **Custom Login URL (Hide wp-admin)** — Rename `wp-login.php` and `wp-admin` to a secret URL, which helps reduce automated brute-force traffic before they even reach your login page.
 * **HTTP Security Headers** — Add Content-Security-Policy (CSP), HSTS, X-Frame-Options, Permissions-Policy, Referrer-Policy, and more. Includes Recommended, Strict, and Custom presets.
 * **REST API Security** — Block unauthenticated REST API access and prevent username enumeration via `/wp-json/wp/v2/users`.
-* **WooCommerce Security** — Anti-card-testing protection on checkout pages and account takeover prevention for customer accounts.
+* **Enterprise WooCommerce Security Mode** — Comprehensive eCommerce protection including Fake Customer Registration Honeypot, Cart/Coupon Abuse Protection, Checkout Card Testing limits, and REST/AJAX limits, with payment gateway webhook whitelisting.
 * **Vulnerability Audit** — Automatically detects plugins, themes, and WordPress core versions with known CVEs (Common Vulnerabilities and Exposures).
 * **Database Optimizer** — Removes post revisions, expired transients, orphaned metadata, and spam comments to improve database performance.
 * **Storage Cleanup Scanner** — Safely identifies unused images, PDFs, and orphaned upload files to reclaim disk space.
@@ -277,6 +277,32 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 ---
 
 == Changelog ==
+
+= 1.0.14 =
+* **Enterprise WooCommerce Security Module:** Complete overhaul providing granular protection against Checkout Abuse, Cart/Coupon spam, and Fake Registrations using Honeypots and advanced Rate Limiting. Also blocks WooCommerce REST API scraping and account enumeration, while automatically whitelisting legitimate webhooks from Stripe, PayPal, and Mollie.
+* **Advanced Database Malware Scanner:** The malware scanner now scans deep inside `wp_options`, `wp_postmeta`, `wp_usermeta`, and Custom Tables for hidden JavaScript injections, encoded PHP, SEO spam, and backdoor iframes. 
+* **Database Optimization & Log Retention:** Added automatic WP-Cron log cleanup with customizable retention policies (7 days to 1 year) to prevent your database from ballooning in size.
+* **Hardened Filesystem Operations:** We've introduced a 3-layer security model for advanced filesystem operations (like `chattr`). Now strictly opt-in, properly capability checked, and fully audited.
+* **Centralized Permission Engine:** Upgraded access controls across 30+ files to use a new centralized `Nexura_Security::can_manage_security()` method, making the plugin more reliable and extensible.
+* **Advanced Backdoor Detection:** We've completely overhauled our malware signature engine! The new system is highly optimized, fully transparent, and now includes enhanced detection rules for the latest WordPress malware variants (including WP-VCD).
+* **Hardened Passwordless Logins:** Magic Link authentication is now even more secure with strict account-level rate limiting and ultra-secure session handling to prevent brute-force abuse.
+* **Ultra-Fast Local Geo-Blocking:** We've integrated the industry-standard MaxMind GeoLite2 database! Enjoy lightning-fast country detection natively on your server, acting as a robust fallback for sites not using Cloudflare.
+* **Strict Security Headers:** Refined our Security Headers engine to enforce rock-solid protections accurately across both Free and Pro versions without conflicting with advanced server setups.
+* **Dashboard Polish:** Improved threat visibility in your Nexura Dashboard with enhanced, intuitive color-coded badges for Critical security alerts.
+* **Core Optimizations:** Under-the-hood privacy improvements with a new proprietary server-side IP geolocation engine that keeps your visitors' data secure and private.
+
+= 1.0.13 =
+* **Major Upgrade (Unified Architecture):** We have completely rebuilt the plugin core! Free and Pro versions are now merged into a single, highly optimized codebase. Enjoy lightning-fast performance, zero plugin conflicts, and a seamless experience.
+* **Instant Pro Upgrades:** Upgrading to Pro is now easier than ever! No need to download or manage separate "Pro" plugins. Simply activate your license, and all premium enterprise features unlock instantly within your existing dashboard.
+* **Performance Boost:** Removed legacy dual-WAF loading constraints, significantly reducing server response times and lowering CPU usage across all hosting environments.
+* **Fix:** Enhanced dynamic path resolution to ensure maximum compatibility with advanced WordPress setups and custom deployment workflows.
+
+= 1.0.12 =
+* **Enhancement:** Streamlined the Pro license activation process for a seamless, instant upgrade experience without caching delays.
+* **Enhancement:** Improved menu integration with the Freemius SDK for a cleaner admin dashboard experience.
+* **Fix:** Resolved a critical initialization issue in the Pro module loader to ensure maximum stability on all hosting environments.
+* **Fix:** Restored and optimized the 3D Geo-Location Map visualization within the WAF Analytics dashboard.
+* **Fix:** Addressed a display issue on feature preview pages to ensure smooth navigation for Free tier users.
 
 = 1.0.11 =
 * **Feature:** Added Vulnerability Scanner to detect known CVEs in plugins and themes.

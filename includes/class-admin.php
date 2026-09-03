@@ -77,10 +77,16 @@ class Admin {
         $table_name = $wpdb->prefix . 'NEXURA_scan_results';
         
         // Ensure scan results table exists before checking columns
-        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $actual_table = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        if ( $actual_table && strcasecmp( $actual_table, $table_name ) === 0 ) {
             $row = $wpdb->get_results( "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$wpdb->prefix}NEXURA_scan_results' AND COLUMN_NAME = 'line_number'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
             if ( empty( $row ) ) {
                 $wpdb->query( "ALTER TABLE {$wpdb->prefix}NEXURA_scan_results ADD COLUMN line_number int(11) DEFAULT 0 NOT NULL AFTER confidence" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.DirectDatabaseQuery
+            }
+            
+            $row_status = $wpdb->get_results( "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '{$wpdb->prefix}NEXURA_scan_results' AND COLUMN_NAME = 'status'" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+            if ( empty( $row_status ) ) {
+                $wpdb->query( "ALTER TABLE {$wpdb->prefix}NEXURA_scan_results ADD COLUMN status varchar(20) DEFAULT 'infected' NOT NULL AFTER line_number" ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.DirectDatabaseQuery
             }
         }
 
@@ -133,7 +139,7 @@ class Admin {
             }
 
             // Verify permissions
-            if ( ! current_user_can( 'manage_options' ) ) {
+            if ( ! \Nexura_Security::can_manage_security() ) {
                 wp_die( esc_html__( 'You do not have permission to download this report.', 'nexura-security' ) );
             }
 
@@ -170,7 +176,7 @@ class Admin {
             if ( ! isset( $_GET['_wpnonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_GET['_wpnonce'] ) ), 'nexura_export_settings_action' ) ) {
                 wp_die( esc_html__( 'Security check failed.', 'nexura-security' ) );
             }
-            if ( ! current_user_can( 'manage_options' ) ) {
+            if ( ! \Nexura_Security::can_manage_security() ) {
                 wp_die( esc_html__( 'You do not have permission to export settings.', 'nexura-security' ) );
             }
 
@@ -202,7 +208,7 @@ class Admin {
             if ( ! isset( $_POST['nexura_import_settings_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['nexura_import_settings_nonce'] ) ), 'nexura_import_settings_action' ) ) {
                 wp_die( esc_html__( 'Security check failed.', 'nexura-security' ) );
             }
-            if ( ! current_user_can( 'manage_options' ) ) {
+            if ( ! \Nexura_Security::can_manage_security() ) {
                 wp_die( esc_html__( 'You do not have permission to import settings.', 'nexura-security' ) );
             }
 
@@ -266,10 +272,48 @@ class Admin {
         register_setting( 'NEXURA_settings_group', 'NEXURA_htaccess_xmlrpc', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_htaccess_signature', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_htaccess_author', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_disable_user_enum', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_disable_app_passwords', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_wpscan_api_key', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_auto_heal', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_waf', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_bot_protection', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_threat_intel', $sanitize_args );
+        
+        // Log Retention
+        register_setting( 'NEXURA_settings_group', 'NEXURA_log_retention', [ 'sanitize_callback' => 'absint' ] );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_advanced_fs', [ 'sanitize_callback' => 'absint' ] );
+
+        // Privacy & External Services Disclosure Settings
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_visitor_tracking', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_vt_collect_ip', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_vt_collect_user_id', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_vt_collect_referrer', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_vt_collect_ua', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_turnstile', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_recaptcha', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_safe_browsing', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_hibp', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_enable_ai_assistant', $sanitize_args );
+
+        // WooCommerce Security
+        $wc_options = [
+            'NEXURA_wc_security_master',
+            'NEXURA_wc_login_abuse',
+            'NEXURA_wc_fake_registration',
+            'NEXURA_wc_checkout_abuse',
+            'NEXURA_wc_cart_abuse',
+            'NEXURA_wc_coupon_abuse',
+            'NEXURA_wc_rest_api',
+            'NEXURA_wc_order_api',
+            'NEXURA_wc_xmlrpc',
+            'NEXURA_wc_admin_ajax',
+            'NEXURA_wc_payment_protection'
+        ];
+        foreach ( $wc_options as $opt ) {
+            register_setting( 'NEXURA_settings_group', $opt, [ 'sanitize_callback' => 'absint' ] );
+        }
+        register_setting( 'NEXURA_settings_group', 'NEXURA_wc_security_level', [ 'sanitize_callback' => 'sanitize_text_field' ] );
         
         // Alert System settings
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_email_alerts', $sanitize_args );
@@ -320,6 +364,57 @@ class Admin {
         add_action( 'update_option_NEXURA_enable_waf', [ $this, 'schedule_core_backup_download' ], 10, 3 );
         add_action( 'add_option_NEXURA_enable_waf', [ $this, 'schedule_core_backup_download_add' ], 10, 2 );
         add_action( 'nexura_download_core_backup', [ $this, 'download_core_backup' ] );
+
+        // Sync WAF settings for Endpoint WAF
+        add_action( 'update_option_NEXURA_enable_waf', [ $this, 'sync_waf_settings' ] );
+        add_action( 'add_option_NEXURA_enable_waf', [ $this, 'sync_waf_settings' ] );
+        add_action( 'update_option_NEXURA_enable_bot_protection', [ $this, 'sync_waf_settings' ] );
+        add_action( 'add_option_NEXURA_enable_bot_protection', [ $this, 'sync_waf_settings' ] );
+    }
+
+    public function sync_waf_settings() {
+        $upload_dir = wp_upload_dir();
+        $waf_dir = $upload_dir['basedir'] . '/nexura-security';
+        $settings_file = $waf_dir . '/waf_settings.json';
+        
+        $waf_mode = get_option( 'NEXURA_enable_waf', 'protecting' );
+        // Legacy conversion
+        if ( $waf_mode === '1' || $waf_mode === 1 || $waf_mode === true ) {
+            $waf_mode = 'protecting';
+        } elseif ( $waf_mode === '0' || $waf_mode === 0 || $waf_mode === false ) {
+            $waf_mode = 'disabled';
+        }
+        
+        $settings = [
+            'NEXURA_enable_waf' => $waf_mode,
+            'NEXURA_enable_bot_protection' => get_option( 'NEXURA_enable_bot_protection', 1 ),
+            'is_pro' => function_exists( 'nexura_is_pro' ) ? nexura_is_pro() : false,
+        ];
+
+        $dirs_to_protect = [
+            $upload_dir['basedir'] . '/nexura-security',
+            $upload_dir['basedir'] . '/nexura-logs',
+            $upload_dir['basedir'] . '/nexura-backups',
+        ];
+        
+        foreach ( $dirs_to_protect as $dir ) {
+            if ( ! is_dir( $dir ) ) {
+                @mkdir( $dir, 0755, true ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_mkdir
+            }
+            
+            $htaccess_file = $dir . '/.htaccess';
+            if ( ! file_exists( $htaccess_file ) ) {
+                $htaccess_content = "<FilesMatch \"\.(json|log|txt|mmdb|sql|zip)$\">\n    Require all denied\n</FilesMatch>\n";
+                @file_put_contents( $htaccess_file, $htaccess_content, LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
+            }
+            
+            $index_file = $dir . '/index.php';
+            if ( ! file_exists( $index_file ) ) {
+                @file_put_contents( $index_file, "<?php\n// Silence is golden.\n", LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
+            }
+        }
+        
+        @file_put_contents( $settings_file, json_encode( $settings ), LOCK_EX );
     }
 
     public function schedule_core_backup_download_add( $option, $value ) {
@@ -327,7 +422,7 @@ class Admin {
     }
 
     public function schedule_core_backup_download( $old_value, $value, $option ) {
-        if ( '1' === $value ) {
+        if ( in_array( $value, [ '1', 1, 'protecting', 'learning' ], true ) ) {
             if ( ! wp_next_scheduled( 'nexura_download_core_backup' ) ) {
                 wp_schedule_single_event( time(), 'nexura_download_core_backup' );
             }
@@ -432,6 +527,7 @@ class Admin {
             'issues-detected'      => __( 'Issues Detected', 'nexura-security' ),
             'file-integrity'       => __( 'File Integrity', 'nexura-security' ),
             'hardening'            => __( 'Hardening', 'nexura-security' ),
+            'security-headers'     => __( 'Security Headers', 'nexura-security' ),
             'google-safe-browsing' => __( 'Google Safe Browsing', 'nexura-security' ),
             'settings'             => __( 'Settings', 'nexura-security' ),
             'login-security'       => __( 'Login Security', 'nexura-security' ),
@@ -440,22 +536,33 @@ class Admin {
             'db-security'          => __( 'Database Security', 'nexura-security' ),
             'ssl-settings'         => __( 'SSL & HTTPS', 'nexura-security' ),
             'about'                => __( 'About', 'nexura-security' ),
-            'contact'              => __( 'Contact Us', 'nexura-security' ),
+            'help'                 => __( 'Support', 'nexura-security' ),
+
+            // Pro Features (Registered under nexura-hidden to grant permission)
+            'privacy-engine'       => __( 'Privacy Engine', 'nexura-security' ),
+            'privacy-whitelabel'   => __( 'Privacy Engine', 'nexura-security' ),
+            'waf-analytics'        => __( 'WAF Analytics', 'nexura-security' ),
+            'active-monitoring'    => __( 'Active Monitoring', 'nexura-security' ),
+            'vulnerability-audit'  => __( 'Vulnerability Audit', 'nexura-security' ),
+            'third-party-audit'    => __( 'Third-Party Audit', 'nexura-security' ),
+            'performance'          => __( 'Performance Audit', 'nexura-security' ),
+            'file-snapshots'       => __( 'File Snapshots', 'nexura-security' ),
+            'logs'                 => __( 'Logs', 'nexura-security' ),
+            'rest-security'        => __( 'REST API Security', 'nexura-security' ),
+            'plugin-cleaner'       => __( 'Plugin Cleaner', 'nexura-security' ),
+            'db-optimizer'         => __( 'DB Optimizer', 'nexura-security' ),
+            'geo-blocking'         => __( 'Geo-Blocking', 'nexura-security' ),
+            'ip-intelligence'      => __( 'IP Intelligence', 'nexura-security' ),
+            'session-monitor'      => __( 'Session Monitor', 'nexura-security' ),
+            'ai-assistant'         => __( 'AI Assistant', 'nexura-security' ),
+            'database-ids'         => __( 'Database IDS', 'nexura-security' ),
         ];
 
-        // Only add Free Security Headers menu if Pro is not installed/active
-        if ( ! nexura_is_pro() ) {
-            // Insert it after hardening
-            $submenu_pages = array_slice( $submenu_pages, 0, 5, true ) +
-                [ 'security-headers' => __( 'Security Headers', 'nexura-security' ) ] +
-                array_slice( $submenu_pages, 5, null, true );
-        }
-
         // Define which slugs should be visible in the native WordPress sidebar
-        $visible_slugs = [ 'dashboard', 'settings', 'about', 'contact' ];
+        $visible_slugs = [ 'dashboard', 'settings', 'about', 'help' ];
 
         foreach ( $submenu_pages as $slug => $title ) {
-            $parent = in_array( $slug, $visible_slugs, true ) ? 'nexura' : 'nexura_hidden';
+            $parent = in_array( $slug, $visible_slugs, true ) ? 'nexura' : 'nexura-hidden';
             
             add_submenu_page(
                 $parent,
@@ -466,6 +573,100 @@ class Admin {
                 [ $this, 'render_view' ]
             );
         }
+    }
+
+    /**
+     * Returns the dynamic structure for the custom UI sidebar menu.
+     * Filterable via 'nexura_sidebar_menu_items'.
+     *
+     * @return array
+     */
+    public static function get_sidebar_structure() {
+        $structure = [
+            'Navigation' => [
+                'dashboard' => [
+                    'url'   => 'admin.php?page=nexura-dashboard',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>',
+                    'label' => __( 'Dashboard', 'nexura-security' ),
+                ],
+                'malware-scan' => [
+                    'url'   => 'admin.php?page=nexura-malware-scan',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path></svg>',
+                    'label' => __( 'Malware Scan', 'nexura-security' ),
+                ],
+                'issues-detected' => [
+                    'url'   => 'admin.php?page=nexura-issues-detected',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
+                    'label' => __( 'Issues Detected', 'nexura-security' ),
+                ],
+                'file-integrity' => [
+                    'url'   => 'admin.php?page=nexura-file-integrity',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>',
+                    'label' => __( 'File Integrity', 'nexura-security' ),
+                ],
+                'hardening' => [
+                    'url'   => 'admin.php?page=nexura-hardening',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>',
+                    'label' => __( 'Hardening', 'nexura-security' ),
+                ],
+            ],
+            'System' => [
+                'ssl-settings' => [
+                    'url'   => 'admin.php?page=nexura-ssl-settings',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>',
+                    'label' => __( 'SSL & HTTPS', 'nexura-security' ),
+                ],
+                'login-security' => [
+                    'url'   => 'admin.php?page=nexura-login-security',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
+                    'label' => __( 'Login Security', 'nexura-security' ),
+                ],
+                'settings' => [
+                    'url'   => 'admin.php?page=nexura-settings',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>',
+                    'label' => __( 'Settings', 'nexura-security' ),
+                ],
+            ],
+            'Audits & Logs' => [
+                'db-security' => [
+                    'url'   => 'admin.php?page=nexura-db-security',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>',
+                    'label' => __( 'DB Security', 'nexura-security' ),
+                ],
+                'cron-audit' => [
+                    'url'   => 'admin.php?page=nexura-cron-audit',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+                    'label' => __( 'Cron Audit', 'nexura-security' ),
+                ],
+                'audit-logs' => [
+                    'url'   => 'admin.php?page=nexura-audit-logs',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>',
+                    'label' => __( 'Audit Logs', 'nexura-security' ),
+                ],
+            ],
+            'Misc' => [
+                'about' => [
+                    'url'   => 'admin.php?page=nexura-about',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>',
+                    'label' => __( 'About', 'nexura-security' ),
+                ],
+            ],
+        ];
+
+        if ( ! nexura_is_pro() ) {
+            $structure['Navigation']['security-headers'] = [
+                'url'   => 'admin.php?page=nexura-security-headers',
+                'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>',
+                'label' => __( 'Security Headers', 'nexura-security' ),
+            ];
+            $structure['Navigation']['google-safe-browsing'] = [
+                'url'   => 'admin.php?page=nexura-google-safe-browsing',
+                'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"></path></svg>',
+                'label' => __( 'Google Safe Browsing', 'nexura-security' ),
+            ];
+        }
+
+        return apply_filters( 'nexura_sidebar_menu_items', $structure );
     }
 
     /**
@@ -539,7 +740,7 @@ class Admin {
         
         $plan = nexura_is_pro() ? 'pro' : 'free';
 
-        $upgrade_url = function_exists('nexurasec_fs') ? nexurasec_fs()->get_upgrade_url() : 'https://nexurasecurity.com/pricing';
+        $upgrade_url = function_exists('nsp_fs') ? nsp_fs()->get_upgrade_url() : 'https://nexurasecurity.com/pricing';
 
         $recaptcha_stats = [
             'labels' => [],
@@ -549,7 +750,8 @@ class Admin {
 
         // Fetch reCAPTCHA stats if table exists
         $table_recaptcha = $wpdb->prefix . 'NEXURA_recaptcha_logs';
-        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_recaptcha ) ) === $table_recaptcha ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $actual_table_recaptcha = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_recaptcha ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        if ( $actual_table_recaptcha && strcasecmp( $actual_table_recaptcha, $table_recaptcha ) === 0 ) {
             $threshold = (float) get_option( 'NEXURA_recaptcha_threshold', '0.5' );
             for ( $i = 6; $i >= 0; $i-- ) {
                 $date = gmdate( 'Y-m-d', strtotime( "-$i days" ) );
@@ -571,7 +773,8 @@ class Admin {
             'medium' => []
         ];
         
-        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) { // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+        $actual_table = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        if ( $actual_table && strcasecmp( $actual_table, $table_name ) === 0 ) {
             for ( $i = 6; $i >= 0; $i-- ) {
                 $date = gmdate( 'Y-m-d', strtotime( "-$i days" ) );
                 $display_date = gmdate( 'M j', strtotime( "-$i days" ) );
@@ -635,7 +838,9 @@ class Admin {
             'pro_slugs'      => [
                 'nexura-active-monitoring', 'nexura-vulnerability-audit', 'nexura-third-party-audit',
                 'nexura-performance', 'nexura-file-snapshots', 'nexura-logs',
-                'nexura-rest-security', 'nexura-plugin-cleaner', 'nexura-db-optimizer'
+                'nexura-security-headers', 'nexura-rest-security', 'nexura-plugin-cleaner', 'nexura-db-optimizer',
+                'nexura-geo-blocking', 'nexura-ip-intelligence', 'nexura-session-monitor',
+                'nexura-waf-analytics', 'nexura-privacy-engine'
             ],
             'backup_nonce'   => wp_create_nonce( 'nexura_db_backup' )
         ] );
@@ -677,14 +882,22 @@ class Admin {
     private function load_view( $view ) {
         if ( 'login-security' === $view ) {
             $file = NEXURA_PLUGIN_DIR . 'admin/views/login-security-main.php';
+        } elseif ( 'waf-analytics' === $view ) {
+            $file = NEXURA_PLUGIN_DIR . 'admin/views/pro/waf-analytics.php';
+        } elseif ( 'privacy-engine' === $view ) {
+            $file = NEXURA_PLUGIN_DIR . 'admin/views/pro/privacy.php';
+        } elseif ( 'privacy-whitelabel' === $view ) {
+            $file = NEXURA_PLUGIN_DIR . 'admin/views/pro/privacy-whitelabel.php';
+        } elseif ( 'database-ids' === $view ) {
+            $file = NEXURA_PLUGIN_DIR . 'admin/views/pro/database-ids.php';
         } else {
             $file = NEXURA_PLUGIN_DIR . 'admin/views/' . $view . '.php';
-        }
-
-        // If Pro plugin is active and has its own view registered via add_submenu_page,
-        // skip the Free version's view to prevent double rendering.
-        if ( 'security-headers' === $view && nexura_is_pro() ) {
-            return;
+            if ( ! file_exists( $file ) ) {
+                $pro_file = NEXURA_PLUGIN_DIR . 'admin/views/pro/' . $view . '.php';
+                if ( file_exists( $pro_file ) ) {
+                    $file = $pro_file;
+                }
+            }
         }
 
         if ( file_exists( $file ) ) {
@@ -692,7 +905,9 @@ class Admin {
             require $file;
             require NEXURA_PLUGIN_DIR . 'admin/views/partials/footer.php';
         } else {
-            echo '<div class="notice notice-error"><p>View not found: ' . esc_html( $view ) . '</p></div>';
+            require NEXURA_PLUGIN_DIR . 'admin/views/partials/header.php';
+            require NEXURA_PLUGIN_DIR . 'admin/views/pro-upgrade.php';
+            require NEXURA_PLUGIN_DIR . 'admin/views/partials/footer.php';
         }
     }
 
@@ -724,7 +939,8 @@ class Admin {
         $scanned_files = (int) get_option( 'NEXURA_scan_total', 0 );
         
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) {
+        $actual_table = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        if ( $actual_table && strcasecmp( $actual_table, $table_name ) === 0 ) {
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
             $total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
@@ -838,7 +1054,8 @@ class Admin {
         $total_issues = 0;
         
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) {
+        $actual_table = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        if ( $actual_table && strcasecmp( $actual_table, $table_name ) === 0 ) {
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
             $total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
         }
@@ -864,7 +1081,7 @@ class Admin {
      * Adds Nexura Security notification badge to the WP Admin Bar.
      */
     public function add_admin_bar_notification( $wp_admin_bar ) {
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! \Nexura_Security::can_manage_security() ) {
             return;
         }
 
@@ -873,7 +1090,8 @@ class Admin {
         $issues_count = 0;
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) {
+        $actual_table = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        if ( $actual_table && strcasecmp( $actual_table, $table_name ) === 0 ) {
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
             $issues_count = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" );
         }
@@ -921,3 +1139,4 @@ class Admin {
     }
 
 }
+

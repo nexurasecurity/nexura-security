@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
         </div>
     <?php endif; ?>
     <?php settings_fields( 'NEXURA_settings_group' ); ?>
-    <?php settings_errors( 'NEXURA_settings_group' ); ?>
+    <?php if ( function_exists( 'settings_errors' ) ) { settings_errors( 'NEXURA_settings_group' ); } ?>
     <?php
     /**
      * Hook for Pro add-ons to inject UI at the top of the settings page.
@@ -66,7 +66,8 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <th scope="row"><label for="NEXURA_hide_third_party_notices"><?php esc_html_e( 'Hide Third-Party Notices', 'nexura-security' ); ?></label></th>
                 <td>
                     <label class="nexura-switch">
-                        <input type="checkbox" id="NEXURA_hide_third_party_notices" name="NEXURA_hide_third_party_notices" value="1" <?php checked( '1', get_option( 'NEXURA_hide_third_party_notices' ) ); ?> />
+                        <input type="hidden" name="NEXURA_hide_third_party_notices" value="0">
+                                <input type="checkbox" id="NEXURA_hide_third_party_notices" name="NEXURA_hide_third_party_notices" value="1" <?php checked( '1', get_option( 'NEXURA_hide_third_party_notices' ) ); ?> />
                         <span class="nexura-slider nexura-round"></span>
                     </label>
                     <p class="description">
@@ -79,11 +80,15 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <td>
                     <label class="nexura-switch">
                         <input type="hidden" name="NEXURA_enable_magic_link" value="0">
-                        <input type="checkbox" id="NEXURA_enable_magic_link" name="NEXURA_enable_magic_link" value="1" <?php checked( '1', get_option( 'NEXURA_enable_magic_link', '1' ) ); ?> />
+                                <input type="checkbox" id="NEXURA_enable_magic_link" name="NEXURA_enable_magic_link" value="1" <?php checked( '1', get_option( 'NEXURA_enable_magic_link', '0' ) ); ?> />
                         <span class="nexura-slider nexura-round"></span>
                     </label>
                     <p class="description">
                         <?php esc_html_e( 'If enabled, users can log in via an email link without needing a password. The button will appear on the default WordPress login page.', 'nexura-security' ); ?>
+                    </p>
+                    <p class="description" style="color: #f59e0b; margin-top: 6px;">
+                        <strong><?php esc_html_e( '⚠ Security Note:', 'nexura-security' ); ?></strong>
+                        <?php esc_html_e( 'Magic Link provides passwordless login. Ensure your users\' email accounts are secure before enabling. Rate limiting is applied per IP and per account (3 requests / 15 min).', 'nexura-security' ); ?>
                     </p>
                 </td>
             </tr>
@@ -91,7 +96,8 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <th scope="row"><label for="NEXURA_enable_auto_heal"><?php esc_html_e( 'Auto-Heal (Crash Recovery)', 'nexura-security' ); ?></label></th>
                 <td>
                     <label class="nexura-switch">
-                        <input type="checkbox" id="NEXURA_enable_auto_heal" name="NEXURA_enable_auto_heal" value="1" <?php checked( '1', get_option( 'NEXURA_enable_auto_heal' ) ); ?> />
+                        <input type="hidden" name="NEXURA_enable_auto_heal" value="0">
+                                <input type="checkbox" id="NEXURA_enable_auto_heal" name="NEXURA_enable_auto_heal" value="1" <?php checked( '1', get_option( 'NEXURA_enable_auto_heal' ) ); ?> />
                         <span class="nexura-slider nexura-round"></span>
                     </label>
                     <p class="description">
@@ -100,14 +106,45 @@ if ( ! defined( 'ABSPATH' ) ) {
                 </td>
             </tr>
             <tr>
-                <th scope="row"><label for="NEXURA_enable_waf"><?php esc_html_e( 'Extended WAF & Core Auto-Restore', 'nexura-security' ); ?></label></th>
+                <th scope="row"><label for="NEXURA_enable_waf"><?php esc_html_e( 'WAF Operating Mode', 'nexura-security' ); ?></label></th>
+                <td>
+                    <?php
+                    $waf_mode = get_option( 'NEXURA_enable_waf', 'protecting' );
+                    if ( $waf_mode === '1' || $waf_mode === 1 || $waf_mode === true ) $waf_mode = 'protecting';
+                    if ( $waf_mode === '0' || $waf_mode === 0 || $waf_mode === false ) $waf_mode = 'disabled';
+                    ?>
+                    <select id="NEXURA_enable_waf" name="NEXURA_enable_waf" style="padding: 8px; border-radius: 6px; border: 1px solid var(--nexura-border); background: var(--nexura-bg-secondary); color: var(--nexura-text); min-width: 250px;">
+                        <option value="disabled" <?php selected( $waf_mode, 'disabled' ); ?>><?php esc_html_e( 'Disabled', 'nexura-security' ); ?></option>
+                        <option value="learning" <?php selected( $waf_mode, 'learning' ); ?>><?php esc_html_e( 'Learning Mode (Log Only)', 'nexura-security' ); ?></option>
+                        <option value="protecting" <?php selected( $waf_mode, 'protecting' ); ?>><?php esc_html_e( 'Protecting (Block Threats)', 'nexura-security' ); ?></option>
+                    </select>
+                    <p class="description">
+                        <?php esc_html_e( 'Learning Mode observes and logs malicious traffic without blocking it, useful for avoiding false positives on new sites.', 'nexura-security' ); ?>
+                    </p>
+                    
+                    <div style="margin-top: 15px; padding: 12px; background: rgba(59, 130, 246, 0.1); border-left: 3px solid #3b82f6; border-radius: 4px;">
+                        <h4 style="margin: 0 0 5px 0; color: #3b82f6; font-size: 13px;">🛡️ Data Privacy for Nginx Users</h4>
+                        <p style="margin: 0; font-size: 12px; color: var(--nexura-text-muted);">
+                            If you are using Nginx, you must manually block public access to WAF logs. Add this to your server configuration:
+                            <code style="display: block; margin-top: 5px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px;">location ~* ^/wp-content/uploads/nexura-(security|logs)/.*\.(json|log|txt|mmdb|sql|zip)$ { deny all; }</code>
+                        </p>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="NEXURA_enable_advanced_fs"><?php esc_html_e( 'Advanced Filesystem Operations', 'nexura-security' ); ?></label></th>
                 <td>
                     <label class="nexura-switch">
-                        <input type="checkbox" id="NEXURA_enable_waf" name="NEXURA_enable_waf" value="1" <?php checked( '1', get_option( 'NEXURA_enable_waf' ) ); ?> />
+                        <input type="hidden" name="NEXURA_enable_advanced_fs" value="0">
+                                <input type="checkbox" id="NEXURA_enable_advanced_fs" name="NEXURA_enable_advanced_fs" value="1" <?php checked( '1', get_option( 'NEXURA_enable_advanced_fs' ) ); ?> />
                         <span class="nexura-slider nexura-round"></span>
                     </label>
                     <p class="description">
-                        <?php esc_html_e( 'Protects your site at the server level (.htaccess). Automatically restores missing WordPress core files if they are deleted by malware.', 'nexura-security' ); ?>
+                        <?php esc_html_e( 'Enable advanced operations like chattr (+i / -i) to prevent malware from regenerating dummy files. Warning: High risk capability.', 'nexura-security' ); ?>
+                    </p>
+                    <p class="description" style="color: #f59e0b; margin-top: 6px;">
+                        <strong><?php esc_html_e( '⚠ System Warning:', 'nexura-security' ); ?></strong>
+                        <?php esc_html_e( 'Advanced filesystem operations use shell_exec() and may not be supported on all hosting environments.', 'nexura-security' ); ?>
                     </p>
                 </td>
             </tr>
@@ -115,7 +152,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <th scope="row"><label for="NEXURA_enable_threat_intel"><?php esc_html_e( 'Global Threat Intelligence', 'nexura-security' ); ?></label></th>
                 <td>
                     <label class="nexura-switch">
-                        <input type="checkbox" id="NEXURA_enable_threat_intel" name="NEXURA_enable_threat_intel" value="1" <?php checked( '1', get_option( 'NEXURA_enable_threat_intel' ) ); ?> />
+                        <input type="hidden" name="NEXURA_enable_threat_intel" value="0">
                         <span class="nexura-slider nexura-round"></span>
                     </label>
                     <p class="description">
@@ -137,6 +174,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <fieldset>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                             <label class="nexura-switch" style="margin: 0;">
+                                <input type="hidden" name="NEXURA_scan_core" value="0">
                                 <input type="checkbox" name="NEXURA_scan_core" value="1" <?php checked( get_option('NEXURA_scan_core', 1), 1 ); ?> />
                                 <span class="nexura-slider"></span>
                             </label>
@@ -144,6 +182,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                             <label class="nexura-switch" style="margin: 0;">
+                                <input type="hidden" name="NEXURA_scan_plugins" value="0">
                                 <input type="checkbox" name="NEXURA_scan_plugins" value="1" <?php checked( get_option('NEXURA_scan_plugins', 1), 1 ); ?> />
                                 <span class="nexura-slider"></span>
                             </label>
@@ -151,6 +190,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                             <label class="nexura-switch" style="margin: 0;">
+                                <input type="hidden" name="NEXURA_enable_smart_scan" value="0">
                                 <input type="checkbox" name="NEXURA_enable_smart_scan" value="1" <?php checked( get_option('NEXURA_enable_smart_scan', 1), 1 ); ?> />
                                 <span class="nexura-slider"></span>
                             </label>
@@ -161,6 +201,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                             <label class="nexura-switch" style="margin: 0;">
+                                <input type="hidden" name="NEXURA_scan_themes" value="0">
                                 <input type="checkbox" name="NEXURA_scan_themes" value="1" <?php checked( get_option('NEXURA_scan_themes', 1), 1 ); ?> />
                                 <span class="nexura-slider"></span>
                             </label>
@@ -168,20 +209,210 @@ if ( ! defined( 'ABSPATH' ) ) {
                         </div>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                             <label class="nexura-switch" style="margin: 0;">
+                                <input type="hidden" name="NEXURA_scan_uploads" value="0">
                                 <input type="checkbox" name="NEXURA_scan_uploads" value="1" <?php checked( get_option('NEXURA_scan_uploads', 1), 1 ); ?> />
                                 <span class="nexura-slider"></span>
                             </label>
                             <span><?php esc_html_e( 'Scan Uploads Directory', 'nexura-security' ); ?></span>
                         </div>
                         <?php do_action( 'nexura_settings_pro_scan_options' ); ?>
+                    </fieldset>
                 </td>
             </tr>
+            
+            <tr>
+                <th scope="row"><?php esc_html_e( 'Log Retention Policy', 'nexura-security' ); ?></th>
+                <td>
+                    <fieldset>
+                        <select name="NEXURA_log_retention" id="NEXURA_log_retention" style="width: 200px; background: rgba(30, 41, 59, 0.7); border: 1px solid var(--nexura-border); color: #f8fafc; border-radius: 4px; padding: 4px 8px;">
+                            <option value="7" <?php selected( get_option('NEXURA_log_retention', 30), 7 ); ?>>7 Days</option>
+                            <option value="30" <?php selected( get_option('NEXURA_log_retention', 30), 30 ); ?>>30 Days (Default)</option>
+                            <option value="90" <?php selected( get_option('NEXURA_log_retention', 30), 90 ); ?>>90 Days</option>
+                            <option value="180" <?php selected( get_option('NEXURA_log_retention', 30), 180 ); ?>>180 Days</option>
+                            <option value="365" <?php selected( get_option('NEXURA_log_retention', 30), 365 ); ?>>1 Year</option>
+                            <option value="0" <?php selected( get_option('NEXURA_log_retention', 30), 0 ); ?>>Forever</option>
+                        </select>
+                        <p class="description">
+                            <?php esc_html_e( 'Automatically delete old security logs (Attack, Audit, Visitor, reCAPTCHA) after this period. Keeps your database small.', 'nexura-security' ); ?>
+                        </p>
+                    </fieldset>
+                </td>
+            </tr>
+
+            <!-- Visitor Monitoring & Privacy Section -->
+            <tr>
+                <th scope="row"><label for="NEXURA_enable_visitor_tracking"><?php esc_html_e( 'Visitor Monitoring', 'nexura-security' ); ?></label></th>
+                <td>
+                    <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid var(--nexura-border); padding: 15px; border-radius: 6px;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                            <strong><?php esc_html_e( 'Enable Visitor Monitoring', 'nexura-security' ); ?></strong>
+                            <label class="nexura-switch" style="margin: 0;">
+                                <input type="hidden" name="NEXURA_enable_visitor_tracking" value="0">
+                                <input type="checkbox" id="NEXURA_enable_visitor_tracking" name="NEXURA_enable_visitor_tracking" value="1" <?php checked( '1', get_option( 'NEXURA_enable_visitor_tracking', '0' ) ); ?> />
+                                <span class="nexura-slider nexura-round"></span>
+                            </label>
+                        </div>
+                        <p class="description" style="color: #38bdf8; margin: 0 0 12px 0; font-size: 13px; line-height: 1.5;">
+                            <strong><?php esc_html_e( 'ℹ Privacy & Legal Consent Notice:', 'nexura-security' ); ?></strong>
+                            <?php esc_html_e( 'This feature collects visitor information such as IP address, browser, and page views. Enable only if you have the required privacy/legal consent.', 'nexura-security' ); ?>
+                        </p>
+                        
+                        <div style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; margin-top: 12px;">
+                            <p style="margin: 0 0 8px 0; font-weight: 600; font-size: 13px; color: #f8fafc;"><?php esc_html_e( 'Data Collection Controls:', 'nexura-security' ); ?></p>
+                            <fieldset style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                                    <input type="hidden" name="NEXURA_vt_collect_ip" value="0">
+                                    <input type="checkbox" name="NEXURA_vt_collect_ip" value="1" <?php checked( '1', get_option( 'NEXURA_vt_collect_ip', '1' ) ); ?> />
+                                    <span><?php esc_html_e( 'IP Address', 'nexura-security' ); ?></span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                                    <input type="hidden" name="NEXURA_vt_collect_user_id" value="0">
+                                    <input type="checkbox" name="NEXURA_vt_collect_user_id" value="1" <?php checked( '1', get_option( 'NEXURA_vt_collect_user_id', '1' ) ); ?> />
+                                    <span><?php esc_html_e( 'User ID', 'nexura-security' ); ?></span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                                    <input type="hidden" name="NEXURA_vt_collect_referrer" value="0">
+                                    <input type="checkbox" name="NEXURA_vt_collect_referrer" value="1" <?php checked( '1', get_option( 'NEXURA_vt_collect_referrer', '1' ) ); ?> />
+                                    <span><?php esc_html_e( 'Referrer URL', 'nexura-security' ); ?></span>
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 8px; font-size: 13px;">
+                                    <input type="hidden" name="NEXURA_vt_collect_ua" value="0">
+                                    <input type="checkbox" name="NEXURA_vt_collect_ua" value="1" <?php checked( '1', get_option( 'NEXURA_vt_collect_ua', '1' ) ); ?> />
+                                    <span><?php esc_html_e( 'User Agent / Browser', 'nexura-security' ); ?></span>
+                                </label>
+                            </fieldset>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <!-- WooCommerce Security Section -->
+            <?php if ( class_exists( 'WooCommerce' ) ) : ?>
+            <tr>
+                <th scope="row">
+                    <h3 style="margin: 0; font-size: 14px; color: #3b82f6; display: flex; align-items: center; gap: 8px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+                        <?php esc_html_e( 'WooCommerce Security', 'nexura-security' ); ?>
+                    </h3>
+                </th>
+                <td>
+                    <div style="background: rgba(30, 41, 59, 0.4); border: 1px solid var(--nexura-border); padding: 15px; border-radius: 6px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <div>
+                                <strong><?php esc_html_e( 'Master Protection', 'nexura-security' ); ?></strong>
+                                <p class="description" style="margin: 2px 0 0 0;"><?php esc_html_e( 'Enable enterprise-grade security for your store.', 'nexura-security' ); ?></p>
+                            </div>
+                            <label class="nexura-switch">
+                                <input type="hidden" name="NEXURA_wc_security_master" value="0">
+                                <input type="checkbox" id="NEXURA_wc_security_master" name="NEXURA_wc_security_master" value="1" <?php checked( '1', get_option( 'NEXURA_wc_security_master', '0' ) ); ?> />
+                                <span class="nexura-slider nexura-round"></span>
+                            </label>
+                        </div>
+
+                        <div id="nexura-wc-settings-wrapper" style="opacity: <?php echo get_option( 'NEXURA_wc_security_master', '0' ) === '1' ? '1' : '0.5'; ?>; pointer-events: <?php echo get_option( 'NEXURA_wc_security_master', '0' ) === '1' ? 'auto' : 'none'; ?>; transition: all 0.3s ease;">
+                            <div style="margin-bottom: 20px;">
+                                <label for="NEXURA_wc_security_level" style="font-weight: 600; display: block; margin-bottom: 8px;"><?php esc_html_e( 'Security Level', 'nexura-security' ); ?></label>
+                                <select name="NEXURA_wc_security_level" id="NEXURA_wc_security_level" style="width: 100%; max-width: 300px; background: rgba(15, 23, 42, 0.7); border: 1px solid var(--nexura-border); color: #f8fafc; border-radius: 4px; padding: 4px 8px;">
+                                    <option value="basic" <?php selected( get_option('NEXURA_wc_security_level', 'balanced'), 'basic' ); ?>><?php esc_html_e( 'Basic (Low Impact)', 'nexura-security' ); ?></option>
+                                    <option value="balanced" <?php selected( get_option('NEXURA_wc_security_level', 'balanced'), 'balanced' ); ?>><?php esc_html_e( 'Balanced (Recommended)', 'nexura-security' ); ?></option>
+                                    <option value="strict" <?php selected( get_option('NEXURA_wc_security_level', 'balanced'), 'strict' ); ?>><?php esc_html_e( 'Strict (Aggressive)', 'nexura-security' ); ?></option>
+                                    <option value="custom" <?php selected( get_option('NEXURA_wc_security_level', 'balanced'), 'custom' ); ?>><?php esc_html_e( 'Custom (Manual Control)', 'nexura-security' ); ?></option>
+                                </select>
+                            </div>
+
+                            <fieldset id="nexura-wc-modules">
+                                <legend class="screen-reader-text"><span><?php esc_html_e( 'Protection Modules', 'nexura-security' ); ?></span></legend>
+                                <strong style="display:block; margin-bottom: 10px;"><?php esc_html_e( 'Protection Modules', 'nexura-security' ); ?></strong>
+                                
+                                <?php
+                                $modules = [
+                                    'NEXURA_wc_login_abuse' => __( 'Login Abuse Protection', 'nexura-security' ),
+                                    'NEXURA_wc_fake_registration' => __( 'Fake Registration Protection', 'nexura-security' ),
+                                    'NEXURA_wc_checkout_abuse' => __( 'Checkout Abuse Protection', 'nexura-security' ),
+                                    'NEXURA_wc_cart_abuse' => __( 'Cart Abuse Protection', 'nexura-security' ),
+                                    'NEXURA_wc_coupon_abuse' => __( 'Coupon Abuse Protection', 'nexura-security' ),
+                                    'NEXURA_wc_rest_api' => __( 'REST API Protection', 'nexura-security' ),
+                                    'NEXURA_wc_order_api' => __( 'Order API Protection', 'nexura-security' ),
+                                    'NEXURA_wc_xmlrpc' => __( 'XML-RPC Protection', 'nexura-security' ),
+                                    'NEXURA_wc_admin_ajax' => __( 'Admin AJAX Protection', 'nexura-security' ),
+                                    'NEXURA_wc_payment_protection' => __( 'Payment Endpoint Protection', 'nexura-security' ),
+                                ];
+
+                                foreach ( $modules as $key => $label ) {
+                                    $checked = get_option( $key, '1' ); // Default 1 for balanced
+                                    ?>
+                                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
+                                        <label class="nexura-switch" style="margin: 0; transform: scale(0.8); transform-origin: left center;">
+                                            <input type="hidden" name="<?php echo esc_attr( $key ); ?>" value="0">
+                                            <input type="checkbox" name="<?php echo esc_attr( $key ); ?>" class="nexura-wc-module-toggle" value="1" <?php checked( $checked, '1' ); ?> />
+                                            <span class="nexura-slider nexura-round"></span>
+                                        </label>
+                                        <span style="font-size: 13px;"><?php echo esc_html( $label ); ?></span>
+                                    </div>
+                                    <?php
+                                }
+                                ?>
+                            </fieldset>
+                        </div>
+                    </div>
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const master = document.getElementById('NEXURA_wc_security_master');
+                            const wrapper = document.getElementById('nexura-wc-settings-wrapper');
+                            const levelSelect = document.getElementById('NEXURA_wc_security_level');
+                            const toggles = document.querySelectorAll('.nexura-wc-module-toggle');
+                            
+                            master.addEventListener('change', function() {
+                                if(this.checked) {
+                                    wrapper.style.opacity = '1';
+                                    wrapper.style.pointerEvents = 'auto';
+                                } else {
+                                    wrapper.style.opacity = '0.5';
+                                    wrapper.style.pointerEvents = 'none';
+                                }
+                            });
+
+                            const applyPreset = function() {
+                                const level = levelSelect.value;
+                                if (level === 'custom') return; // User manually controls
+
+                                toggles.forEach(toggle => {
+                                    if (level === 'basic') {
+                                        // Basic: Login, Registration, XML-RPC
+                                        if (['NEXURA_wc_login_abuse', 'NEXURA_wc_fake_registration', 'NEXURA_wc_xmlrpc'].includes(toggle.name)) {
+                                            toggle.checked = true;
+                                        } else {
+                                            toggle.checked = false;
+                                        }
+                                    } else if (level === 'balanced' || level === 'strict') {
+                                        // Balanced/Strict: Enable everything by default
+                                        toggle.checked = true;
+                                    }
+                                });
+                            };
+
+                            levelSelect.addEventListener('change', applyPreset);
+                            
+                            // If user manually clicks a toggle, switch level to custom
+                            toggles.forEach(toggle => {
+                                toggle.addEventListener('change', function() {
+                                    levelSelect.value = 'custom';
+                                });
+                            });
+                        });
+                    </script>
+                </td>
+            </tr>
+            <?php endif; ?>
+                </td>
+            </tr>
+
             <tr>
                 <th scope="row"><?php esc_html_e( 'Pwned Password Check', 'nexura-security' ); ?></th>
                 <td>
                     <fieldset>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
                             <label class="nexura-switch" style="margin: 0;">
+                                <input type="hidden" name="NEXURA_enable_pwned_check" value="0">
                                 <input type="checkbox" name="NEXURA_enable_pwned_check" value="1" <?php checked( get_option('NEXURA_enable_pwned_check', 0), 1 ); ?> />
                                 <span class="nexura-slider"></span>
                             </label>
@@ -193,7 +424,6 @@ if ( ! defined( 'ABSPATH' ) ) {
                     </fieldset>
                 </td>
             </tr>
-            
             
             <!-- Geo-Blocking Section (Pro Upsell) -->
             <?php if ( ! nexura_is_pro() ) : ?>
@@ -246,6 +476,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         <!-- Email Alert Toggle -->
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                             <label class="nexura-switch" style="margin: 0;">
+                                <input type="hidden" name="NEXURA_enable_email_alerts" value="0">
                                 <input type="checkbox" id="NEXURA_enable_email_alerts" name="NEXURA_enable_email_alerts" value="1" <?php checked( '1', get_option( 'NEXURA_enable_email_alerts' ) ); ?> />
                                 <span class="nexura-slider nexura-round"></span>
                             </label>
@@ -261,7 +492,8 @@ if ( ! defined( 'ABSPATH' ) ) {
                             
                             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
                                 <label class="nexura-switch" style="margin: 0; transform: scale(0.8);">
-                                    <input type="checkbox" name="NEXURA_email_alerts_critical" value="1" <?php checked( '1', get_option( 'NEXURA_email_alerts_critical', '1' ) ); ?> />
+                                    <input type="hidden" name="NEXURA_email_alerts_critical" value="0">
+                                <input type="checkbox" name="NEXURA_email_alerts_critical" value="1" <?php checked( '1', get_option( 'NEXURA_email_alerts_critical', '1' ) ); ?> />
                                     <span class="nexura-slider nexura-round"></span>
                                 </label>
                                 <span style="font-size: 13px; color: #ef4444; font-weight: bold;"><?php esc_html_e( 'Critical Events', 'nexura-security' ); ?></span>
@@ -269,7 +501,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
                             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
                                 <label class="nexura-switch" style="margin: 0; transform: scale(0.8);">
-                                    <input type="checkbox" name="NEXURA_email_alerts_high" value="1" <?php checked( '1', get_option( 'NEXURA_email_alerts_high', '1' ) ); ?> />
+                                    <input type="hidden" name="NEXURA_email_alerts_high" value="0">
+                                <input type="checkbox" name="NEXURA_email_alerts_high" value="1" <?php checked( '1', get_option( 'NEXURA_email_alerts_high', '1' ) ); ?> />
                                     <span class="nexura-slider nexura-round"></span>
                                 </label>
                                 <span style="font-size: 13px; color: #f59e0b; font-weight: bold;"><?php esc_html_e( 'High Events', 'nexura-security' ); ?></span>
@@ -277,7 +510,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
                             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
                                 <label class="nexura-switch" style="margin: 0; transform: scale(0.8);">
-                                    <input type="checkbox" name="NEXURA_email_alerts_medium" value="1" <?php checked( '1', get_option( 'NEXURA_email_alerts_medium', '0' ) ); ?> />
+                                    <input type="hidden" name="NEXURA_email_alerts_medium" value="0">
+                                <input type="checkbox" name="NEXURA_email_alerts_medium" value="1" <?php checked( '1', get_option( 'NEXURA_email_alerts_medium', '0' ) ); ?> />
                                     <span class="nexura-slider nexura-round"></span>
                                 </label>
                                 <span style="font-size: 13px; color: #3b82f6; font-weight: bold;"><?php esc_html_e( 'Medium Events', 'nexura-security' ); ?></span>
@@ -287,6 +521,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         <!-- Webhook Alert Toggle -->
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
                             <label class="nexura-switch" style="margin: 0;">
+                                <input type="hidden" name="NEXURA_enable_webhook_alerts" value="0">
                                 <input type="checkbox" id="NEXURA_enable_webhook_alerts" name="NEXURA_enable_webhook_alerts" value="1" <?php checked( '1', get_option( 'NEXURA_enable_webhook_alerts' ) ); ?> />
                                 <span class="nexura-slider nexura-round"></span>
                             </label>
@@ -319,7 +554,8 @@ if ( ! defined( 'ABSPATH' ) ) {
                         <div style="display: inline-block; vertical-align: top; width: 48%; margin-bottom: 20px; padding-right: 15px; box-sizing: border-box;">
                             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
                                 <label class="nexura-switch" style="margin: 0;">
-                                    <input type="checkbox" name="NEXURA_htaccess_file" value="1" <?php checked( get_option('NEXURA_htaccess_file', 0), 1 ); ?> />
+                                    <input type="hidden" name="NEXURA_htaccess_file" value="0">
+                                <input type="checkbox" name="NEXURA_htaccess_file" value="1" <?php checked( get_option('NEXURA_htaccess_file', 0), 1 ); ?> />
                                     <span class="nexura-slider"></span>
                                 </label>
                                 <strong><?php esc_html_e( 'Protect .htaccess', 'nexura-security' ); ?></strong>
@@ -330,7 +566,8 @@ if ( ! defined( 'ABSPATH' ) ) {
                         <div style="display: inline-block; vertical-align: top; width: 48%; margin-bottom: 20px; box-sizing: border-box;">
                             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
                                 <label class="nexura-switch" style="margin: 0;">
-                                    <input type="checkbox" name="NEXURA_htaccess_xmlrpc" value="1" <?php checked( get_option('NEXURA_htaccess_xmlrpc', 0), 1 ); ?> />
+                                    <input type="hidden" name="NEXURA_htaccess_xmlrpc" value="0">
+                                <input type="checkbox" name="NEXURA_htaccess_xmlrpc" value="1" <?php checked( get_option('NEXURA_htaccess_xmlrpc', 0), 1 ); ?> />
                                     <span class="nexura-slider"></span>
                                 </label>
                                 <strong><?php esc_html_e( 'Disable XML-RPC', 'nexura-security' ); ?></strong>
@@ -341,6 +578,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         <div style="display: inline-block; vertical-align: top; width: 48%; margin-bottom: 20px; padding-right: 15px; box-sizing: border-box;">
                             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
                                 <label class="nexura-switch" style="margin: 0;">
+                                    <input type="hidden" name="NEXURA_htaccess_signature" value="0">
                                     <input type="checkbox" name="NEXURA_htaccess_signature" value="1" <?php checked( get_option('NEXURA_htaccess_signature', 0), 1 ); ?> />
                                     <span class="nexura-slider"></span>
                                 </label>
@@ -352,20 +590,20 @@ if ( ! defined( 'ABSPATH' ) ) {
                         <div style="display: inline-block; vertical-align: top; width: 48%; margin-bottom: 20px; box-sizing: border-box;">
                             <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
                                 <label class="nexura-switch" style="margin: 0;">
+                                    <input type="hidden" name="NEXURA_htaccess_author" value="0">
                                     <input type="checkbox" name="NEXURA_htaccess_author" value="1" <?php checked( get_option('NEXURA_htaccess_author', 0), 1 ); ?> />
                                     <span class="nexura-slider"></span>
                                 </label>
-                                <strong><?php esc_html_e( 'Block Author Scans', 'nexura-security' ); ?></strong>
+                                <strong><?php esc_html_e( 'Disable Author Enumeration', 'nexura-security' ); ?></strong>
                             </div>
-                            <p class="description" style="margin-top: 0; margin-left: 52px;"><?php esc_html_e( 'Prevents malicious bots from discovering user IDs via ?author=1 queries.', 'nexura-security' ); ?></p>
+                            <p class="description" style="margin-top: 0; margin-left: 52px;"><?php esc_html_e( 'Prevents hackers from scraping your usernames via /?author=1 requests.', 'nexura-security' ); ?></p>
                         </div>
-                        
                     </fieldset>
                 </td>
             </tr>
-            <tr>
-                <th scope="row"><?php esc_html_e( 'Database Backup', 'nexura-security' ); ?></th>
-                <td>
+        <tr>
+            <th scope="row"><?php esc_html_e( 'Database Backup', 'nexura-security' ); ?></th>
+            <td>
                     <button type="button" id="nexura-db-backup-btn" class="button button-secondary">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 4px;"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg> 
                         <?php esc_html_e( 'Download Database Backup', 'nexura-security' ); ?>
@@ -382,6 +620,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                     <fieldset>
                         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 8px;">
                             <label class="nexura-switch" style="margin: 0;">
+                                <input type="hidden" name="NEXURA_delete_data_on_uninstall" value="0">
                                 <input type="checkbox" name="NEXURA_delete_data_on_uninstall" value="1" <?php checked( get_option('NEXURA_delete_data_on_uninstall', 0), 1 ); ?> />
                                 <span class="nexura-slider"></span>
                             </label>
@@ -393,10 +632,128 @@ if ( ! defined( 'ABSPATH' ) ) {
                     </fieldset>
                 </td>
             </tr>
+            <tr>
+                <th scope="row"><?php esc_html_e( 'Privacy & External Services', 'nexura-security' ); ?></th>
+                <td>
+                    <p class="description" style="margin-top: 0; margin-bottom: 16px;">
+                        <?php esc_html_e( 'In compliance with WordPress.org Guidelines, below is a complete disclosure of third-party external services used by Nexura Security. You can enable or disable each integration and inspect transmitted data.', 'nexura-security' ); ?>
+                    </p>
+
+                    <div class="nexura-privacy-disclosures" style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- 1. Nexura Threat Intelligence -->
+                        <div style="background: rgba(15, 23, 42, 0.6); padding: 14px 18px; border-radius: 10px; border: 1px solid var(--nexura-border);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <strong style="color: #f8fafc; font-size: 14px;"><?php esc_html_e( 'Nexura Threat Intelligence', 'nexura-security' ); ?></strong>
+                                <label class="nexura-switch" style="margin: 0;">
+                                    <input type="hidden" name="NEXURA_enable_threat_intel" value="0">
+                                    <input type="checkbox" name="NEXURA_enable_threat_intel" id="NEXURA_enable_threat_intel" value="1" <?php checked( get_option('NEXURA_enable_threat_intel', 1), 1 ); ?> />
+                                    <span class="nexura-slider"></span>
+                                </label>
+                            </div>
+                            <div style="font-size: 12px; color: #94a3b8; line-height: 1.6;">
+                                <div><strong>Data Sent:</strong> File SHA-256 hashes, anonymized IP threat scores</div>
+                                <div><strong>Purpose:</strong> Real-time zero-day malware signatures & IP reputation feeds</div>
+                                <div><strong>Trigger:</strong> Automated background scans or WAF IP lookup</div>
+                                <div><strong>Provider:</strong> Sentinel Guard Security / Nexura Cloud | <a href="https://nexurasecurity.com/privacy" target="_blank" style="color: #38bdf8;">Privacy Policy</a></div>
+                            </div>
+                        </div>
+
+                        <!-- 2. Cloudflare Turnstile -->
+                        <div style="background: rgba(15, 23, 42, 0.6); padding: 14px 18px; border-radius: 10px; border: 1px solid var(--nexura-border);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <strong style="color: #f8fafc; font-size: 14px;"><?php esc_html_e( 'Cloudflare Turnstile', 'nexura-security' ); ?></strong>
+                                <label class="nexura-switch" style="margin: 0;">
+                                    <input type="hidden" name="NEXURA_enable_turnstile" value="0">
+                                    <input type="checkbox" name="NEXURA_enable_turnstile" id="NEXURA_enable_turnstile" value="1" <?php checked( get_option('NEXURA_enable_turnstile', 0), 1 ); ?> />
+                                    <span class="nexura-slider"></span>
+                                </label>
+                            </div>
+                            <div style="font-size: 12px; color: #94a3b8; line-height: 1.6;">
+                                <div><strong>Data Sent:</strong> Turnstile visitor response token, IP address, User Agent</div>
+                                <div><strong>Purpose:</strong> Privacy-friendly bot validation on login, registration, and comment forms</div>
+                                <div><strong>Trigger:</strong> Form submission by site visitors when Turnstile is enabled</div>
+                                <div><strong>Provider:</strong> Cloudflare, Inc. | <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" style="color: #38bdf8;">Privacy Policy</a></div>
+                            </div>
+                        </div>
+
+                        <!-- 3. Google reCAPTCHA -->
+                        <div style="background: rgba(15, 23, 42, 0.6); padding: 14px 18px; border-radius: 10px; border: 1px solid var(--nexura-border);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <strong style="color: #f8fafc; font-size: 14px;"><?php esc_html_e( 'Google reCAPTCHA', 'nexura-security' ); ?></strong>
+                                <label class="nexura-switch" style="margin: 0;">
+                                    <input type="hidden" name="NEXURA_enable_recaptcha" value="0">
+                                    <input type="checkbox" name="NEXURA_enable_recaptcha" id="NEXURA_enable_recaptcha" value="1" <?php checked( get_option('NEXURA_enable_recaptcha', 0), 1 ); ?> />
+                                    <span class="nexura-slider"></span>
+                                </label>
+                            </div>
+                            <div style="font-size: 12px; color: #94a3b8; line-height: 1.6;">
+                                <div><strong>Data Sent:</strong> reCAPTCHA response token, IP address, browser environment details</div>
+                                <div><strong>Purpose:</strong> Automated brute-force and spam bot mitigation</div>
+                                <div><strong>Trigger:</strong> Login or form submit when reCAPTCHA v2/v3 is enabled</div>
+                                <div><strong>Provider:</strong> Google LLC | <a href="https://policies.google.com/privacy" target="_blank" style="color: #38bdf8;">Privacy Policy</a></div>
+                            </div>
+                        </div>
+
+                        <!-- 4. Google Safe Browsing -->
+                        <div style="background: rgba(15, 23, 42, 0.6); padding: 14px 18px; border-radius: 10px; border: 1px solid var(--nexura-border);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <strong style="color: #f8fafc; font-size: 14px;"><?php esc_html_e( 'Google Safe Browsing', 'nexura-security' ); ?></strong>
+                                <label class="nexura-switch" style="margin: 0;">
+                                    <input type="hidden" name="NEXURA_enable_safe_browsing" value="0">
+                                    <input type="checkbox" name="NEXURA_enable_safe_browsing" id="NEXURA_enable_safe_browsing" value="1" <?php checked( get_option('NEXURA_enable_safe_browsing', 0), 1 ); ?> />
+                                    <span class="nexura-slider"></span>
+                                </label>
+                            </div>
+                            <div style="font-size: 12px; color: #94a3b8; line-height: 1.6;">
+                                <div><strong>Data Sent:</strong> Site domain name and URL</div>
+                                <div><strong>Purpose:</strong> Verifies if the domain is flagged for phishing or malware distribution</div>
+                                <div><strong>Trigger:</strong> Manual site audit or scheduled security score calculation</div>
+                                <div><strong>Provider:</strong> Google LLC | <a href="https://policies.google.com/privacy" target="_blank" style="color: #38bdf8;">Privacy Policy</a></div>
+                            </div>
+                        </div>
+
+                        <!-- 5. Have I Been Pwned -->
+                        <div style="background: rgba(15, 23, 42, 0.6); padding: 14px 18px; border-radius: 10px; border: 1px solid var(--nexura-border);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <strong style="color: #f8fafc; font-size: 14px;"><?php esc_html_e( 'Have I Been Pwned (HIBP)', 'nexura-security' ); ?></strong>
+                                <label class="nexura-switch" style="margin: 0;">
+                                    <input type="hidden" name="NEXURA_enable_hibp" value="0">
+                                    <input type="checkbox" name="NEXURA_enable_hibp" id="NEXURA_enable_hibp" value="1" <?php checked( get_option('NEXURA_enable_hibp', 0), 1 ); ?> />
+                                    <span class="nexura-slider"></span>
+                                </label>
+                            </div>
+                            <div style="font-size: 12px; color: #94a3b8; line-height: 1.6;">
+                                <div><strong>Data Sent:</strong> First 5 characters of SHA-1 password hash (k-Anonymity privacy model)</div>
+                                <div><strong>Purpose:</strong> Checks if user passwords have been exposed in public data breaches</div>
+                                <div><strong>Trigger:</strong> User password updates or login authentication when enabled</div>
+                                <div><strong>Provider:</strong> Troy Hunt / HIBP API | <a href="https://haveibeenpwned.com/Privacy" target="_blank" style="color: #38bdf8;">Privacy Policy</a></div>
+                            </div>
+                        </div>
+
+                        <!-- 6. AI Security Assistant -->
+                        <div style="background: rgba(15, 23, 42, 0.6); padding: 14px 18px; border-radius: 10px; border: 1px solid var(--nexura-border);">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                                <strong style="color: #f8fafc; font-size: 14px;"><?php esc_html_e( 'AI Security Assistant', 'nexura-security' ); ?></strong>
+                                <label class="nexura-switch" style="margin: 0;">
+                                    <input type="hidden" name="NEXURA_enable_ai_assistant" value="0">
+                                    <input type="checkbox" name="NEXURA_enable_ai_assistant" id="NEXURA_enable_ai_assistant" value="1" <?php checked( get_option('NEXURA_enable_ai_assistant', 0), 1 ); ?> />
+                                    <span class="nexura-slider"></span>
+                                </label>
+                            </div>
+                            <div style="font-size: 12px; color: #94a3b8; line-height: 1.6;">
+                                <div><strong>Data Sent:</strong> Anonymized security logs or code snippets explicitly selected for analysis</div>
+                                <div><strong>Purpose:</strong> AI-powered threat diagnosis, security advice, and auto-fix recommendations</div>
+                                <div><strong>Trigger:</strong> Admin-initiated AI Security Assistant queries</div>
+                                <div><strong>Provider:</strong> OpenAI / Google Gemini / Anthropic | <a href="https://openai.com/privacy" target="_blank" style="color: #38bdf8;">Privacy Policy</a></div>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
         </table>
-        <?php submit_button(); ?>
-    </form>
-</div>
+        <?php if ( function_exists( 'submit_button' ) ) { submit_button(); } ?>
+    </div>
+</form>
 
 <!-- Settings Export / Import -->
 <div class="nexura-card nexura-fade-in" style="margin-top: 20px;">

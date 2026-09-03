@@ -28,8 +28,8 @@ class Alert_System {
      * Send Email Alert
      */
     private static function send_email( $title, $message, $severity ) {
-        $enable_email = get_option( 'NEXURA_enable_email_alerts' );
-        if ( empty( $enable_email ) ) {
+        $enable_email = get_option( 'NEXURA_enable_email_alerts', '1' );
+        if ( empty( $enable_email ) || '0' === (string) $enable_email ) {
             return;
         }
 

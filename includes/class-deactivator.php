@@ -42,6 +42,7 @@ class Deactivator {
             // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
             @chmod( $htaccess_file, 0644 );
             insert_with_markers( $htaccess_file, 'Nexura Security', [] );
+            insert_with_markers( $htaccess_file, 'Nexura Server Lock', [] );
         }
 
         // Remove WAF rules from .user.ini

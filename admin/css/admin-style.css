@@ -82,11 +82,17 @@
     font-family: var(--nexura-font);
 }
 
+/* Fix WP Admin body content background overflow */
+#wpbody-content {
+    background: var(--nexura-bg-primary) !important;
+    padding-bottom: 0 !important;
+}
+
 .nexura-wrap {
     margin: -8px -2px 0 -10px;
     padding: 0;
     background: var(--nexura-bg-primary);
-    min-height: 100vh;
+    min-height: calc(100vh - 32px);
     color: var(--nexura-text-primary);
 }
 
@@ -1390,6 +1396,7 @@
     border: 1px solid var(--nexura-border);
     transition: .4s;
     border-radius: 24px;
+    box-sizing: border-box;
 }
 
 .nexura-slider:before,
@@ -1403,29 +1410,30 @@
     background-color: var(--nexura-text-muted);
     transition: .4s;
     border-radius: 50%;
+    box-sizing: border-box;
 }
 
-input:checked+.nexura-slider,
-input:checked+.nexura-toggle-slider {
+input:checked ~ .nexura-slider,
+input:checked ~ .nexura-toggle-slider {
     background-color: var(--nexura-accent);
     border-color: var(--nexura-accent);
 }
 
-input:focus+.nexura-slider,
-input:focus+.nexura-toggle-slider {
+input:focus ~ .nexura-slider,
+input:focus ~ .nexura-toggle-slider {
     box-shadow: 0 0 1px var(--nexura-accent);
 }
 
-input:checked+.nexura-slider:before,
-input:checked+.nexura-toggle-slider:before {
+input:checked ~ .nexura-slider:before,
+input:checked ~ .nexura-toggle-slider:before {
     transform: translateX(24px);
     background-color: #fff;
     box-shadow: 0 0 8px var(--nexura-accent);
 }
 
 /* Disabled state */
-input:disabled+.nexura-slider,
-input:disabled+.nexura-toggle-slider {
+input:disabled ~ .nexura-slider,
+input:disabled ~ .nexura-toggle-slider {
     cursor: not-allowed;
     opacity: 0.5;
 }

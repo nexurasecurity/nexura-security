@@ -120,29 +120,10 @@ class Security_Headers {
         if ( get_option( 'NEXURA_sh_x_content_type_options', '1' ) === '1' ) {
             header( 'X-Content-Type-Options: nosniff' );
         }
-
-        // Strict-Transport-Security (HSTS)
-        $hsts = get_option( 'NEXURA_sh_strict_transport_security', 'disabled' );
-        if ( $hsts !== 'disabled' && ! empty( $hsts ) ) {
-            header( 'Strict-Transport-Security: ' . $hsts );
-        }
-
-        // Referrer-Policy
-        $referrer = get_option( 'NEXURA_sh_referrer_policy', 'strict-origin-when-cross-origin' );
-        if ( $referrer !== 'disabled' && ! empty( $referrer ) ) {
-            header( 'Referrer-Policy: ' . $referrer );
-        }
-
-        // Permissions-Policy
-        $permissions = get_option( 'NEXURA_sh_permissions_policy', '' );
-        if ( ! empty( $permissions ) ) {
-            header( 'Permissions-Policy: ' . $permissions );
-        }
-
-        // Content-Security-Policy (CSP)
-        $csp = get_option( 'NEXURA_sh_content_security_policy', '' );
-        if ( ! empty( $csp ) ) {
-            header( 'Content-Security-Policy: ' . $csp );
-        }
+        
+        // Note: Strict-Transport-Security (HSTS), Referrer-Policy, 
+        // Permissions-Policy, and Content-Security-Policy (CSP) are 
+        // Pro-only features and are handled by the Pro version via
+        // Nexura_Security\Security_Headers_Pro class.
     }
 }

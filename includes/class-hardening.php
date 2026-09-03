@@ -26,35 +26,9 @@ class Hardening {
 
 
 
-        // API Hardening
-        if ( get_option( 'NEXURA_disable_xmlrpc', '0' ) === '1' ) {
-            add_filter( 'xmlrpc_enabled', '__return_false' );
-        }
-        add_filter( 'rest_authentication_errors', [ $this, 'restrict_rest_api' ] );
+        // API Hardening (Now handled by REST_Security_Free class)
     }
 
-    /**
-     * Restricts the REST API to authenticated users to prevent enumeration.
-     */
-    public function restrict_rest_api( $result ) {
-        if ( ! empty( $result ) ) {
-            return $result;
-        }
-        
-        // Only restrict if the setting is explicitly enabled
-        if ( ! get_option( 'NEXURA_restrict_rest_api', false ) ) {
-            return $result;
-        }
-
-        if ( ! is_user_logged_in() ) {
-            return new \WP_Error(
-                'rest_not_logged_in',
-                __( 'Nexura: REST API restricted to authenticated users.', 'nexura-security' ),
-                [ 'status' => 401 ]
-            );
-        }
-        return $result;
-    }
 
     /**
      * Disables the file editor capabilities.
@@ -73,7 +47,11 @@ class Hardening {
      * @return bool
      */
     private function is_rule_enabled( $rule_key ) {
-        return (bool) get_option( $rule_key, false );
+        $val = get_option( $rule_key, false );
+        if ( $val === 'disabled' ) {
+            return false;
+        }
+        return (bool) $val;
     }
 
 
@@ -176,20 +154,35 @@ class Hardening {
 
         // 7. Force SSL (HTTPS)
         if ( $this->is_rule_enabled( 'NEXURA_force_ssl' ) ) {
-            $rules[] = '<IfModule mod_rewrite.c>';
-            $rules[] = 'RewriteEngine On';
-            $rules[] = 'RewriteCond %{HTTPS} off';
-            $rules[] = 'RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]';
-            $rules[] = '</IfModule>';
+            // Extract canonical host from WordPress home URL to prevent HTTP_HOST injection attacks.
+            $canonical_host = wp_parse_url( home_url(), PHP_URL_HOST );
+            
+            if ( $canonical_host ) {
+                // Escape dots for Apache regex (not preg_quote which uses PHP regex delimiters)
+                $escaped_host = str_replace( '.', '\.', $canonical_host );
+                
+                // Block #1 (separate IfModule): Reject requests with non-canonical Host header
+                $rules[] = '<IfModule mod_rewrite.c>';
+                $rules[] = 'RewriteEngine On';
+                $rules[] = 'RewriteCond %{HTTP_HOST} !^(www\.)?' . $escaped_host . '$ [NC]';
+                $rules[] = 'RewriteRule .* - [F,L]';
+                $rules[] = '</IfModule>';
+                
+                // Block #2 (separate IfModule): Force HTTPS using hardcoded canonical host
+                // Must be a separate block — [F,L] in Block #1 would short-circuit rules in same block
+                $rules[] = '<IfModule mod_rewrite.c>';
+                $rules[] = 'RewriteEngine On';
+                $rules[] = 'RewriteCond %{HTTPS} off';
+                $rules[] = 'RewriteRule ^(.*)$ https://' . $canonical_host . '%{REQUEST_URI} [L,R=301]';
+                $rules[] = '</IfModule>';
+            }
         }
 
         // 8. WAF & Auto-Restore (auto_prepend_file)
-        if ( $this->is_rule_enabled( 'NEXURA_enable_waf' ) ) {
-            $waf_path = NEXURA_PLUGIN_DIR . 'nexura-waf.php';
+        // $waf_path declared here (outside if) so .user.ini block below can access it too
+        $waf_path = NEXURA_PLUGIN_DIR . 'nexura-waf.php';
+        if ( $this->is_rule_enabled( 'NEXURA_enable_waf' ) && file_exists( $waf_path ) ) {
             $rules[] = '<IfModule mod_php.c>';
-            $rules[] = 'php_value auto_prepend_file "' . $waf_path . '"';
-            $rules[] = '</IfModule>';
-            $rules[] = '<IfModule php_module>';
             $rules[] = 'php_value auto_prepend_file "' . $waf_path . '"';
             $rules[] = '</IfModule>';
             $rules[] = '<IfModule mod_php7.c>';
@@ -203,10 +196,16 @@ class Hardening {
         // Write to file using WordPress native function
         $rules = apply_filters( 'nexura_htaccess_rules', $rules );
         
-        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_is_writable
-        if ( file_exists( $htaccess_file ) && ! is_writable( $htaccess_file ) ) {
-            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
-            @chmod( $htaccess_file, 0644 );
+        // Ensure .htaccess is writable before writing
+        if ( file_exists( $htaccess_file ) ) {
+            @chmod( $htaccess_file, 0644 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+            
+            // Clean up any legacy nexura-security-pro path in existing .htaccess
+            $current_htaccess = @file_get_contents( $htaccess_file );
+            if ( $current_htaccess && strpos( $current_htaccess, 'nexura-security-pro' ) !== false ) {
+                $cleaned_htaccess = str_replace( 'nexura-security-pro', basename( NEXURA_PLUGIN_DIR ), $current_htaccess );
+                @file_put_contents( $htaccess_file, $cleaned_htaccess );
+            }
         }
         
         insert_with_markers( $htaccess_file, 'Nexura Security', $rules );
@@ -217,11 +216,14 @@ class Hardening {
         $ini_marker_end   = "; END Nexura Security\n";
         
         $current_ini = file_exists( $user_ini_file ) ? @file_get_contents( $user_ini_file ) : '';
-        // Remove old Nexura block
+        // Remove old Nexura block and legacy nexura-security-pro path
         $pattern = '/; BEGIN Nexura Security.*?; END Nexura Security\n?/s';
-        $current_ini = preg_replace( $pattern, '', $current_ini );
+        $current_ini = preg_replace( $pattern, '', (string) $current_ini );
+        if ( strpos( $current_ini, 'nexura-security-pro' ) !== false ) {
+            $current_ini = str_replace( 'nexura-security-pro', basename( NEXURA_PLUGIN_DIR ), $current_ini );
+        }
         
-        if ( $this->is_rule_enabled( 'NEXURA_enable_waf' ) ) {
+        if ( $this->is_rule_enabled( 'NEXURA_enable_waf' ) && file_exists( $waf_path ) ) {
             $new_ini = $ini_marker_start . "auto_prepend_file = '{$waf_path}'\n" . $ini_marker_end;
             $current_ini = trim( $current_ini ) . "\n\n" . $new_ini;
         }
@@ -233,8 +235,7 @@ class Hardening {
         }
 
         if ( get_option( 'nexura_server_lock_applied' ) && file_exists( $htaccess_file ) ) {
-            // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
-            @chmod( $htaccess_file, 0444 );
+            @chmod( $htaccess_file, 0444 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
         }
     }
 }

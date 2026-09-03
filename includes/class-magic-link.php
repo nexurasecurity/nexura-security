@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Magic_Link {
 
     public function init() {
-        if ( ! get_option( 'NEXURA_enable_magic_link', 1 ) ) {
+        if ( ! get_option( 'NEXURA_enable_magic_link', 0 ) ) {
             return;
         }
 
@@ -67,14 +67,29 @@ class Magic_Link {
             }
 
             if ( $user ) {
+                // Account-level rate limit: prevents attacker from hammering
+                // the same account from different IPs.
+                $account_rate_key = 'NEXURA_magic_link_acct_' . $user->ID;
+                $account_attempts = get_transient( $account_rate_key );
+                if ( $account_attempts === false ) $account_attempts = 0;
+                if ( $account_attempts >= 3 ) {
+                    // Still show generic success to avoid user enumeration
+                    login_header( __( 'Magic Link Sent', 'nexura-security' ) );
+                    echo '<p class="message">' . esc_html__( 'If an account exists, a magic link has been sent to your email address.', 'nexura-security' ) . '</p>';
+                    login_footer();
+                    exit;
+                }
+                set_transient( $account_rate_key, $account_attempts + 1, 15 * MINUTE_IN_SECONDS );
+
                 $token = wp_generate_password( 32, false );
-                set_transient( 'NEXURA_magic_link_' . $token, $user->ID, 15 * MINUTE_IN_SECONDS );
+                // 10-minute expiry — shorter window reduces attack surface
+                set_transient( 'NEXURA_magic_link_' . $token, $user->ID, 10 * MINUTE_IN_SECONDS );
 
                 $link = add_query_arg( [ 'NEXURA_magic_token' => $token ], site_url( 'wp-login.php' ) );
 
                 $subject = __( 'Your Magic Login Link', 'nexura-security' );
                 /* translators: %s: Magic login link URL */
-                $message = sprintf( esc_html__( 'Click the following link to log in to your account. This link will expire in 15 minutes: %s', 'nexura-security' ), "\n\n" . $link );
+                $message = sprintf( esc_html__( 'Click the following link to log in to your account. This link will expire in 10 minutes: %s', 'nexura-security' ), "\n\n" . $link );
                 
                 wp_mail( $user->user_email, $subject, $message );
             }
@@ -118,7 +133,9 @@ class Magic_Link {
                 $user = get_user_by( 'id', $user_id );
                 if ( $user ) {
                     wp_set_current_user( $user->ID, $user->user_login );
-                    wp_set_auth_cookie( $user->ID );
+                    // remember=false: session-only cookie (expires on browser close).
+                    // secure=is_ssl(): enforce HTTPS-only cookie on SSL sites.
+                    wp_set_auth_cookie( $user->ID, false, is_ssl() );
                     do_action( 'wp_login', $user->user_login, $user ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
                     wp_safe_redirect( admin_url() );
                     exit;

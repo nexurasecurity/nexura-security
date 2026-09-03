@@ -164,7 +164,7 @@ class Global_Threat_Intel {
     }
 
     public function check_ip_reputation() {
-        if ( is_admin() && current_user_can( 'manage_options' ) ) {
+        if ( is_admin() && \Nexura_Security::can_manage_security() ) {
             return;
         }
 
@@ -332,3 +332,4 @@ class Global_Threat_Intel {
         return filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '127.0.0.1';
     }
 }
+

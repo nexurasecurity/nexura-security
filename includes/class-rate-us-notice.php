@@ -193,7 +193,7 @@ class Rate_Us_Notice {
         if ( ! check_ajax_referer( 'nexura_dismiss_rate_nonce', '_nonce', false ) ) {
             wp_die( -1 );
         }
-        if ( ! current_user_can( 'manage_options' ) ) {
+        if ( ! \Nexura_Security::can_manage_security() ) {
             wp_die( -1 );
         }
 
@@ -206,3 +206,4 @@ class Rate_Us_Notice {
         wp_send_json_success( [ 'permanent' => $permanent ] );
     }
 }
+

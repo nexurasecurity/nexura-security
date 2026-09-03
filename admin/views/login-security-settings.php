@@ -267,13 +267,14 @@ foreach ( $roles as $role_key => $role_data ) {
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><label for="NEXURA_ntp_sync"><?php esc_html_e( 'NTP Time Sync', 'nexura-security' ); ?></label></th>
+                        <th scope="row"><label for="NEXURA_ntp_sync"><?php esc_html_e( 'Enable external NTP time synchronization', 'nexura-security' ); ?></label></th>
                         <td>
                             <label class="nexura-switch">
-                                <input type="checkbox" name="NEXURA_ntp_sync" id="NEXURA_ntp_sync" value="1" <?php checked( '1', get_option( 'NEXURA_ntp_sync', '1' ) ); ?>>
+                                <input type="hidden" name="NEXURA_ntp_sync" value="0">
+                                <input type="checkbox" name="NEXURA_ntp_sync" id="NEXURA_ntp_sync" value="1" <?php checked( '1', get_option( 'NEXURA_ntp_sync', '0' ) ); ?>>
                                 <span class="nexura-slider"></span>
                             </label>
-                            <p class="description"><?php esc_html_e( 'NTP is a protocol that allows for remote time synchronization to ensure your site has the most accurate time for TOTP-based authentication.', 'nexura-security' ); ?></p>
+                            <p class="description"><?php esc_html_e( 'Optional external service. When enabled, Nexura sends a request to the configured time service.', 'nexura-security' ); ?></p>
                         </td>
                     </tr>
                     <tr>

@@ -33,8 +33,8 @@ class Attack_Logger {
         $table_name = $wpdb->prefix . 'NEXURA_attack_logs';
 
         // Check if table exists (in case plugin is not reactivated yet)
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-        if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) !== $table_name ) {
+        $actual_table = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+        if ( ! $actual_table || strcasecmp( $actual_table, $table_name ) !== 0 ) {
             return;
         }
 

@@ -117,7 +117,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     </div>
 
     <div style="text-align: center; margin-top: 30px;">
-        <a href="<?php echo esc_url( function_exists('nexurasec_fs') ? (nexurasec_fs()->is_pricing_page_visible() ? nexurasec_fs()->get_upgrade_url() : nexurasec_fs()->get_account_url()) : '' ); ?>" class="button button-primary" style="background: #ec4899; border-color: #ec4899; padding: 5px 30px; font-size: 16px; font-weight: bold; border-radius: 4px; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);">
+        <a href="<?php echo esc_url( function_exists('nsp_fs') ? (nsp_fs()->is_pricing_page_visible() ? nsp_fs()->get_upgrade_url() : nsp_fs()->get_account_url()) : '' ); ?>" class="button button-primary" style="background: #ec4899; border-color: #ec4899; padding: 5px 30px; font-size: 16px; font-weight: bold; border-radius: 4px; box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);">
             Upgrade to Nexura Pro Now &rarr;
         </a>
     </div>

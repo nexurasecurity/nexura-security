@@ -142,6 +142,7 @@ jQuery(document).ready(function($) {
             if ($('#nexura-force-full-scan').length) {
                 scanData.full = $('#nexura-force-full-scan').is(':checked') ? 1 : 0;
             }
+            scanData.ai_scan = localStorage.getItem('nexura_ai_scan_active') === '1' ? 1 : 0;
 
             $.ajax({
                 url: nexuraRestUrl('nexura/v1/scan/init'),
@@ -1470,10 +1471,7 @@ jQuery(document).ready(function($) {
     sgsStorageScanner.init();
     sgsServerStats.init();
     
-    // Only init logs if we are on the logs page
-    if ($('#nexura-logs-container').length > 0) {
-        sgsLogs.init();
-    }
+    // Log initialization is handled by nexuraProLogs in pro-admin.js
 
     // ======== Dashboard Charts (Chart.js) ========
     // Guard against double-init (script may be enqueued twice on pages with shortcodes)

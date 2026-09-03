@@ -22,7 +22,8 @@ class Security_Score {
         $max_score = 100;
 
         // 1. WAF & Bot Protection (30 points)
-        if ( get_option( 'NEXURA_enable_waf', 1 ) ) {
+        $waf = get_option( 'NEXURA_enable_waf', 1 );
+        if ( $waf && $waf !== 'disabled' && $waf !== '0' ) {
             $score += 15;
         }
         if ( get_option( 'NEXURA_enable_bot_protection', 1 ) ) {

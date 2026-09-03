@@ -1,1 +1,184 @@
-<?php return unserialize(base64_decode("YToxMjp7czoxOToic2hlbGxfZXhlY19wb3N0X2dldCI7YTo0OntzOjc6InBhdHRlcm4iO3M6NTQ6Ii9zaGVsbF9leGVjXHMqXChccypcJF8oUE9TVHxHRVR8UkVRVUVTVHxDT09LSUUpXHMqXFsvaSI7czoxMToiZGVzY3JpcHRpb24iO3M6OTE6InNoZWxsX2V4ZWMoKSBjYWxsZWQgd2l0aCB1c2VyLXN1cHBsaWVkIGlucHV0ICgkX1BPU1QvJF9HRVQpIOKAlCBjbGFzc2ljIHdlYiBzaGVsbCBiYWNrZG9vci4iO3M6NDoicmlzayI7czo4OiJDcml0aWNhbCI7czoxMDoiY29uZmlkZW5jZSI7aTo5OTt9czoxNToic3lzdGVtX3Bvc3RfZ2V0IjthOjQ6e3M6NzoicGF0dGVybiI7czo1MDoiL3N5c3RlbVxzKlwoXHMqXCRfKFBPU1R8R0VUfFJFUVVFU1R8Q09PS0lFKVxzKlxbL2kiO3M6MTE6ImRlc2NyaXB0aW9uIjtzOjcyOiJzeXN0ZW0oKSBjYWxsZWQgd2l0aCB1c2VyLXN1cHBsaWVkIGlucHV0IOKAlCBjb21tYW5kIGluamVjdGlvbiBiYWNrZG9vci4iO3M6NDoicmlzayI7czo4OiJDcml0aWNhbCI7czoxMDoiY29uZmlkZW5jZSI7aTo5OTt9czoxNzoicGFzc3RocnVfcG9zdF9nZXQiO2E6NDp7czo3OiJwYXR0ZXJuIjtzOjUyOiIvcGFzc3RocnVccypcKFxzKlwkXyhQT1NUfEdFVHxSRVFVRVNUfENPT0tJRSlccypcWy9pIjtzOjExOiJkZXNjcmlwdGlvbiI7czo3NDoicGFzc3RocnUoKSBjYWxsZWQgd2l0aCB1c2VyLXN1cHBsaWVkIGlucHV0IOKAlCBjb21tYW5kIGV4ZWN1dGlvbiBiYWNrZG9vci4iO3M6NDoicmlzayI7czo4OiJDcml0aWNhbCI7czoxMDoiY29uZmlkZW5jZSI7aTo5OTt9czoxMzoiZXhlY19wb3N0X2dldCI7YTo0OntzOjc6InBhdHRlcm4iO3M6NTA6Ii9cYmV4ZWNccypcKFxzKlwkXyhQT1NUfEdFVHxSRVFVRVNUfENPT0tJRSlccypcWy9pIjtzOjExOiJkZXNjcmlwdGlvbiI7czo3MDoiZXhlYygpIGNhbGxlZCB3aXRoIHVzZXItc3VwcGxpZWQgaW5wdXQg4oCUIGNvbW1hbmQgZXhlY3V0aW9uIGJhY2tkb29yLiI7czo0OiJyaXNrIjtzOjg6IkNyaXRpY2FsIjtzOjEwOiJjb25maWRlbmNlIjtpOjk5O31zOjE0OiJwb3Blbl9wb3N0X2dldCI7YTo0OntzOjc6InBhdHRlcm4iO3M6NDk6Ii9wb3BlblxzKlwoXHMqXCRfKFBPU1R8R0VUfFJFUVVFU1R8Q09PS0lFKVxzKlxbL2kiO3M6MTE6ImRlc2NyaXB0aW9uIjtzOjcxOiJwb3BlbigpIGNhbGxlZCB3aXRoIHVzZXItc3VwcGxpZWQgaW5wdXQg4oCUIHByb2Nlc3MgZXhlY3V0aW9uIGJhY2tkb29yLiI7czo0OiJyaXNrIjtzOjg6IkNyaXRpY2FsIjtzOjEwOiJjb25maWRlbmNlIjtpOjk5O31zOjE3OiJhdXRoX2tleV9iYWNrZG9vciI7YTo0OntzOjc6InBhdHRlcm4iO3M6MTYzOiIvXCRfKFBPU1R8R0VUfFJFUVVFU1R8Q09PS0lFKVxzKlxbXHMqWydcIl0oa2V5fGNtZHxwYXNzfHBhc3N3b3JkfGF1dGh8dG9rZW58c2VjcmV0fGJhY2tkb29yKVsnXCJdXHMqXF0uKig/OnNoZWxsX2V4ZWN8c3lzdGVtfHBhc3N0aHJ1fGV4ZWN8cG9wZW58cHJvY19vcGVuKVxzKlwoL2lzIjtzOjExOiJkZXNjcmlwdGlvbiI7czo4MzoiQXV0aC1rZXkgZ2F0ZWQgYmFja2Rvb3IgZGV0ZWN0ZWQg4oCUIGF0dGFja2VyIHNlbmRzIHNlY3JldCBrZXkgdG8gZXhlY3V0ZSBjb21tYW5kcy4iO3M6NDoicmlzayI7czo4OiJDcml0aWNhbCI7czoxMDoiY29uZmlkZW5jZSI7aTo5OTt9czoyMToicmV2ZXJzZV9hdXRoX2JhY2tkb29yIjthOjQ6e3M6NzoicGF0dGVybiI7czoxMzk6Ii8oPzpzaGVsbF9leGVjfHN5c3RlbXxwYXNzdGhydXxleGVjfHBvcGVufHByb2Nfb3BlbilccypcKFxzKlwkXyhQT1NUfEdFVHxSRVFVRVNUfENPT0tJRSlccypcW1xzKlsnXCJdKGNtZHxjb21tYW5kfGN8eHxleGVjfHJ1bilbJ1wiXVxzKlxdL2kiO3M6MTE6ImRlc2NyaXB0aW9uIjtzOjY4OiJEaXJlY3QgY29tbWFuZCBleGVjdXRpb24gZnJvbSB1c2VyIGlucHV0IOKAlCB3ZWIgc2hlbGwgUkFUIGRldGVjdGVkLiI7czo0OiJyaXNrIjtzOjg6IkNyaXRpY2FsIjtzOjEwOiJjb25maWRlbmNlIjtpOjk5O31zOjE3OiJldmFsX3Bvc3RfcmVxdWVzdCI7YTo0OntzOjc6InBhdHRlcm4iO3M6NzQ6Ii9ldmFsXHMqXChccyooPzpiYXNlNjRfZGVjb2RlXHMqXChccyopP1wkXyhQT1NUfEdFVHxSRVFVRVNUfENPT0tJRSlccypcWy9pIjtzOjExOiJkZXNjcmlwdGlvbiI7czo3MDoiZXZhbCgpIHdpdGggdXNlci1zdXBwbGllZCBpbnB1dCDigJQgYXJiaXRyYXJ5IGNvZGUgZXhlY3V0aW9uIGJhY2tkb29yLiI7czo0OiJyaXNrIjtzOjg6IkNyaXRpY2FsIjtzOjEwOiJjb25maWRlbmNlIjtpOjk5O31zOjE3OiJwcmVnX3JlcGxhY2VfZXZhbCI7YTo0OntzOjc6InBhdHRlcm4iO3M6NDQ6Ii9wcmVnX3JlcGxhY2VccypcKFxzKlsnXCJdXC8uKlwvZVsnXCJdXHMqLC9pIjtzOjExOiJkZXNjcmlwdGlvbiI7czo5OToicHJlZ19yZXBsYWNlIHdpdGggL2UgbW9kaWZpZXIg4oCUIGFsbG93cyBhcmJpdHJhcnkgY29kZSBleGVjdXRpb24gKGRlcHJlY2F0ZWQgYnV0IHN0aWxsIGRhbmdlcm91cykuIjtzOjQ6InJpc2siO3M6ODoiQ3JpdGljYWwiO3M6MTA6ImNvbmZpZGVuY2UiO2k6OTU7fXM6MjE6ImZpbGVfcHV0X2NvbnRlbnRzX3BocCI7YTo0OntzOjc6InBhdHRlcm4iO3M6NTg6Ii9maWxlX3B1dF9jb250ZW50c1xzKlwoXHMqLipcJF8oUE9TVHxHRVR8UkVRVUVTVHxDT09LSUUpL2kiO3M6MTE6ImRlc2NyaXB0aW9uIjtzOjY1OiJmaWxlX3B1dF9jb250ZW50cyB3aXRoIHVzZXIgaW5wdXQg4oCUIGZpbGUgdXBsb2FkL3dyaXRlIGJhY2tkb29yLiI7czo0OiJyaXNrIjtzOjg6IkNyaXRpY2FsIjtzOjEwOiJjb25maWRlbmNlIjtpOjk1O31zOjI0OiJiYXNlNjRfc3VwZXJnbG9iYWxfY29tYm8iO2E6NDp7czo3OiJwYXR0ZXJuIjtzOjY0OiIvYmFzZTY0X2RlY29kZVxzKlwoXHMqXCRfKFBPU1R8R0VUfFJFUVVFU1R8Q09PS0lFfFNFUlZFUilccypcWy9pIjtzOjExOiJkZXNjcmlwdGlvbiI7czo3MDoiYmFzZTY0X2RlY29kZSB3aXRoIHN1cGVyZ2xvYmFsIGlucHV0IOKAlCBvYmZ1c2NhdGVkIGNvbW1hbmQgaW5qZWN0aW9uLiI7czo0OiJyaXNrIjtzOjQ6IkhpZ2giO3M6MTA6ImNvbmZpZGVuY2UiO2k6OTU7fXM6MjM6ImhpZGRlbl9wb3N0X2NtZF9wYXR0ZXJuIjthOjQ6e3M6NzoicGF0dGVybiI7czo5MzoiL2lmXHMqXChccyppc3NldFxzKlwoXHMqXCRfUE9TVFxzKlxbXHMqWydcIl0oY21kfGNvbW1hbmR8Y3x4fGV4ZWN8cnVufHNoZWxsKVsnXCJdXHMqXF1ccypcKS9pIjtzOjExOiJkZXNjcmlwdGlvbiI7czo3MToiSGlkZGVuIFBPU1QgY29tbWFuZCBoYW5kbGVyIGRldGVjdGVkIOKAlCB0eXBpY2FsIHdlYiBzaGVsbCBlbnRyeSBwb2ludC4iO3M6NDoicmlzayI7czo4OiJDcml0aWNhbCI7czoxMDoiY29uZmlkZW5jZSI7aTo5ODt9fQ=="));
+<?php
+/**
+ * Nexura Security - Backdoor Signature Database
+ *
+ * @version    1.2.0
+ * @updated    2026-09-02
+ *
+ * Format per entry:
+ *   'key' => [
+ *       'pattern'     => '/regex/flags',   // PCRE regex
+ *       'description' => 'Human text',
+ *       'risk'        => 'Critical|High|Medium|Low',
+ *       'confidence'  => 0-100,
+ *   ]
+ *
+ * NOTE: Stored as a plain PHP array (human-readable) instead of base64/unserialize
+ * so that:
+ *   1. WP.org plugin review can audit patterns without obfuscation concerns.
+ *   2. Security researchers can contribute / review signatures easily.
+ *   3. False-positive debugging is trivial — each pattern is visible at a glance.
+ *   4. No antivirus false-positive risk: patterns describe what attackers write,
+ *      not what we write (regex strings are not executable code).
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+return [
+
+    // -------------------------------------------------------------------------
+    // CRITICAL - Web Shell / Remote Code Execution
+    // -------------------------------------------------------------------------
+
+    'shell_exec_post_get' => [
+        'pattern'     => '/shell_exec\s*\(\s*\$_(POST|GET|REQUEST|COOKIE)\s*\[/i',
+        'description' => 'shell_exec() called with user-supplied input ($_POST/$_GET) — classic web shell backdoor.',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
+    'system_post_get' => [
+        'pattern'     => '/system\s*\(\s*\$_(POST|GET|REQUEST|COOKIE)\s*\[/i',
+        'description' => 'system() called with user-supplied input — command injection backdoor.',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
+    'passthru_post_get' => [
+        'pattern'     => '/passthru\s*\(\s*\$_(POST|GET|REQUEST|COOKIE)\s*\[/i',
+        'description' => 'passthru() called with user-supplied input — command execution backdoor.',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
+    'popen_post_get' => [
+        'pattern'     => '/popen\s*\(\s*\$_(POST|GET|REQUEST|COOKIE)\s*\[/i',
+        'description' => 'popen() called with user-supplied input — process execution backdoor.',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
+    'eval_post_request' => [
+        'pattern'     => '/eval\s*\(\s*(?:base64_decode\s*\(\s*)?\$_(POST|GET|REQUEST|COOKIE)\s*\[/i',
+        'description' => 'eval() with user-supplied input — arbitrary code execution backdoor.',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
+    'reverse_auth_backdoor' => [
+        'pattern'     => '/(?:shell_exec|system|passthru|exec|popen|proc_open)\s*\(\s*\$_(POST|GET|REQUEST|COOKIE)\s*\[\s*[\'\"](cmd|command|c|x|exec|run)[\'\"]\s*\]/i',
+        'description' => 'Direct command execution from user input — web shell RAT detected.',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
+    'auth_key_backdoor' => [
+        'pattern'     => '/\$_(POST|GET|REQUEST|COOKIE)\s*\[\s*[\'\"](key|cmd|pass|password|auth|token|secret|backdoor)[\'\"]\s*\].{0,100}(?:shell_exec|system|passthru|exec|popen|proc_open)\s*\(/is',
+        'description' => 'Auth-key gated backdoor detected — attacker sends secret key to execute commands.',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
+    'hidden_post_cmd_pattern' => [
+        'pattern'     => '/if\s*\(\s*isset\s*\(\s*\$_POST\s*\[\s*[\'\"](cmd|command|c|x|exec|run|shell)[\'\"]\s*\]\s*\)/i',
+        'description' => 'Hidden POST command handler detected — typical web shell entry point.',
+        'risk'        => 'Critical',
+        'confidence'  => 98,
+    ],
+
+    // -------------------------------------------------------------------------
+    // CRITICAL - Code Execution via PHP Functions
+    // -------------------------------------------------------------------------
+
+    'preg_replace_eval' => [
+        'pattern'     => '/preg_replace\s*\(\s*[\'\"]\/.+\/e[\'\"]\s*,/i',
+        'description' => 'preg_replace with /e modifier — allows arbitrary code execution (deprecated but still dangerous).',
+        'risk'        => 'Critical',
+        'confidence'  => 95,
+    ],
+
+    'assert_post_get' => [
+        'pattern'     => '/assert\s*\(\s*\$_(POST|GET|REQUEST|COOKIE)\s*\[/i',
+        'description' => 'assert() with user-supplied input — code execution backdoor via assert.',
+        'risk'        => 'Critical',
+        'confidence'  => 97,
+    ],
+
+    'create_function_backdoor' => [
+        'pattern'     => '/create_function\s*\(\s*[\'\"]\s*[\'\"]\s*,\s*\$_(POST|GET|REQUEST|COOKIE)/i',
+        'description' => 'create_function() with user input — runtime PHP code creation backdoor.',
+        'risk'        => 'Critical',
+        'confidence'  => 96,
+    ],
+
+    // -------------------------------------------------------------------------
+    // HIGH - File Write / Upload Backdoors
+    // -------------------------------------------------------------------------
+
+    'file_put_contents_php' => [
+        'pattern'     => '/file_put_contents\s*\(\s*.*\$_(POST|GET|REQUEST|COOKIE)/i',
+        'description' => 'file_put_contents with user input — file upload/write backdoor.',
+        'risk'        => 'Critical',
+        'confidence'  => 95,
+    ],
+
+    'fwrite_post_get' => [
+        'pattern'     => '/fwrite\s*\(\s*\$\w+\s*,\s*\$_(POST|GET|REQUEST|COOKIE)\s*\[/i',
+        'description' => 'fwrite() with user-controlled content — arbitrary file write backdoor.',
+        'risk'        => 'High',
+        'confidence'  => 90,
+    ],
+
+    // -------------------------------------------------------------------------
+    // HIGH - Obfuscation and Evasion
+    // -------------------------------------------------------------------------
+
+    'base64_superglobal_combo' => [
+        'pattern'     => '/base64_decode\s*\(\s*\$_(POST|GET|REQUEST|COOKIE|SERVER)\s*\[/i',
+        'description' => 'base64_decode with superglobal input — obfuscated command injection.',
+        'risk'        => 'High',
+        'confidence'  => 95,
+    ],
+
+    'gzinflate_base64_chain' => [
+        'pattern'     => '/gzinflate\s*\(\s*base64_decode\s*\(/i',
+        'description' => 'gzinflate(base64_decode()) chain — classic PHP obfuscation dropper.',
+        'risk'        => 'High',
+        'confidence'  => 90,
+    ],
+
+    'str_rot13_eval' => [
+        'pattern'     => '/eval\s*\(\s*str_rot13\s*\(/i',
+        'description' => 'eval(str_rot13()) — ROT13 encoded payload execution.',
+        'risk'        => 'High',
+        'confidence'  => 93,
+    ],
+
+    // -------------------------------------------------------------------------
+    // HIGH - Known Malware Signatures
+    // -------------------------------------------------------------------------
+
+    'wp_vcd_malware' => [
+        'pattern'     => '/wp-includes\/wp-vcd|class-wp-vcd|wp_vcd/i',
+        'description' => 'WP-VCD malware signature detected — known WordPress malware family.',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
+    'auto_admin_creation' => [
+        'pattern'     => '/auto-created-admin|admin_pass_reset/i',
+        'description' => 'Auto admin creation pattern — backdoor that creates rogue admin accounts.',
+        'risk'        => 'Critical',
+        'confidence'  => 97,
+    ],
+
+    'xxe_entity_injection' => [
+        'pattern'     => '/<!ENTITY\s+|SYSTEM\s+[\'"]file:/i',
+        'description' => 'XXE (XML External Entity) injection pattern detected.',
+        'risk'        => 'High',
+        'confidence'  => 92,
+    ],
+
+];

@@ -50,7 +50,7 @@ if ( ! defined( 'ABSPATH' ) ) {
             </div>
         </div>
         
-        <a href="<?php echo esc_url( function_exists('nexurasec_fs') ? nexurasec_fs()->get_upgrade_url() : 'https://nexurasecurity.com/pricing' ); ?>" class="nexura-upgrade-btn">
+        <a href="<?php echo esc_url( function_exists('nsp_fs') ? nsp_fs()->get_upgrade_url() : 'https://nexurasecurity.com/pricing' ); ?>" class="nexura-upgrade-btn">
             <?php esc_html_e( 'Upgrade to Pro Now', 'nexura-security' ); ?>
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
         </a>

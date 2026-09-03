@@ -35,8 +35,9 @@ if ( ! defined( 'ABSPATH' ) ) {
                 $offset = ( $paged - 1 ) * $per_page;
 
                 // Check if table exists
+                $actual_table = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
                 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-                if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table_name ) ) === $table_name ) {
+                if ( $actual_table && strcasecmp( $actual_table, $table_name ) === 0 ) {
                     
                     // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
                     $total_items = $wpdb->get_var( "SELECT COUNT(id) FROM $table_name" );

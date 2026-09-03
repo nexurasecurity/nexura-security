@@ -23,6 +23,7 @@ class Cron {
         add_action( 'NEXURA_daily_fim_check', [ $this, 'run_scheduled_fim' ] );
         add_action( 'NEXURA_daily_gsb_check', [ $this, 'run_scheduled_gsb' ] );
         add_action( 'NEXURA_daily_malware_scan', [ $this, 'run_scheduled_malware_scan' ] );
+        add_action( 'NEXURA_daily_log_cleanup', [ $this, 'run_log_cleanup' ] );
 
         // The background processing event that processes batches of the queue
         add_action( 'NEXURA_process_queue', [ $this, 'process_queue_batch' ] );
@@ -42,6 +43,9 @@ class Cron {
         if ( ! wp_next_scheduled( 'NEXURA_daily_malware_scan' ) ) {
             // Schedule malware scan daily, but delay the first run slightly so it doesn't run exactly with FIM
             wp_schedule_event( time() + HOUR_IN_SECONDS + 1800, 'daily', 'NEXURA_daily_malware_scan' );
+        }
+        if ( ! wp_next_scheduled( 'NEXURA_daily_log_cleanup' ) ) {
+            wp_schedule_event( time() + HOUR_IN_SECONDS + 3600, 'daily', 'NEXURA_daily_log_cleanup' );
         }
     }
 
@@ -142,6 +146,44 @@ class Cron {
         } elseif ( !$response['safe'] ) {
             if ( class_exists( '\Nexura_Security\Logger' ) ) {
                 Logger::log( 'CRITICAL: Google Safe Browsing flagged this site as unsafe!' );
+            }
+        }
+    }
+
+    /**
+     * Callback to clean up old logs based on retention policy.
+     */
+    public function run_log_cleanup() {
+        $retention_days = (int) get_option( 'NEXURA_log_retention', 30 );
+        if ( $retention_days === 0 ) {
+            return; // 0 means keep forever
+        }
+
+        global $wpdb;
+        $cutoff_date = gmdate( 'Y-m-d H:i:s', strtotime( "-{$retention_days} days" ) );
+
+        $tables_created_at = [
+            $wpdb->prefix . 'NEXURA_attack_logs',
+            $wpdb->prefix . 'NEXURA_audit_logs',
+            $wpdb->prefix . 'NEXURA_visitor_logs',
+        ];
+
+        $tables_timestamp = [
+            $wpdb->prefix . 'NEXURA_recaptcha_logs',
+        ];
+
+        // Clean tables using created_at
+        foreach ( $tables_created_at as $table ) {
+            // Check if table exists before deleting
+            if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table ) ) === $table ) {
+                $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table}` WHERE `created_at` < %s", $cutoff_date ) );
+            }
+        }
+
+        // Clean tables using timestamp
+        foreach ( $tables_timestamp as $table ) {
+            if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table ) ) === $table ) {
+                $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table}` WHERE `timestamp` < %s", $cutoff_date ) );
             }
         }
     }

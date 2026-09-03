@@ -39,7 +39,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <p class="nexura-premium-text">
                     <?php esc_html_e( 'This feature is available in the separate Nexura Pro add-on plugin. Upgrade to access advanced automation, real-time analytics, and deep vulnerability audits.', 'nexura-security' ); ?>
                 </p>
-                <a href="<?php echo esc_url( function_exists('nexurasec_fs') ? (nexurasec_fs()->is_pricing_page_visible() ? nexurasec_fs()->get_upgrade_url() : nexurasec_fs()->get_account_url()) : '' ); ?>" class="nexura-premium-btn">
+                <a href="<?php echo esc_url( function_exists('nsp_fs') ? (nsp_fs()->is_pricing_page_visible() ? nsp_fs()->get_upgrade_url() : nsp_fs()->get_account_url()) : '' ); ?>" class="nexura-premium-btn">
                     <?php esc_html_e( 'Upgrade to Pro Now', 'nexura-security' ); ?>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
                 </a>

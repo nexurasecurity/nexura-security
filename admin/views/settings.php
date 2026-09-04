@@ -153,6 +153,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 <td>
                     <label class="nexura-switch">
                         <input type="hidden" name="NEXURA_enable_threat_intel" value="0">
+                        <input type="checkbox" name="NEXURA_enable_threat_intel" id="NEXURA_enable_threat_intel" value="1" <?php checked( get_option('NEXURA_enable_threat_intel', 0), 1 ); ?> />
                         <span class="nexura-slider nexura-round"></span>
                     </label>
                     <p class="description">

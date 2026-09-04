@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.15] - 2026-09-04
+
+### 🛠️ Critical Fixes & Stability
+- **No More "Website Down" (HTTP 500):** Fixed a critical issue on CGI/FastCGI hosting environments (like Bluehost, HostGator, and SiteGround) where enabling the WAF caused server crashes. The firewall directive is now only applied when running natively as an Apache module.
+- **Pro Server Lock Safety:** Applied the same Apache module detection safeguard to the Server Lock feature to ensure maximum compatibility.
+- **Settings Toggle Fix:** Resolved a UI issue in Settings where the "Global Threat Intelligence" toggle switch was not functioning properly.
+
+### 🛡️ Security Enhancements
+- **Smart Auto-Recovery:** Introduced a new safety net. If a newly applied security rule written to `.htaccess` causes a server error, the plugin now automatically detects it via a background loopback check and restores the previous safe state within seconds!
+- **Upgraded Comment Spam Blocker:** We've added 8 new domains (`shorturl.fm`, `t.ly`, `goo.su`, `qrco.de`, `bit.do`, `cutt.us`, `shorte.st`, `adf.ly`) actively used by spambots to our URL blocklist.
+
+---
+
 ## [1.0.14] - 2026-09-03
 
 ### 🛡️ Enterprise WooCommerce Security & Protection

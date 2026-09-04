@@ -13,6 +13,39 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Hardening {
 
     /**
+     * Safely updates .htaccess and rolls back if it causes a 500 error.
+     */
+    public static function safe_htaccess_update( $file, $marker, $rules ) {
+        require_once ABSPATH . 'wp-admin/includes/misc.php';
+        
+        $original_content = file_exists( $file ) ? @file_get_contents( $file ) : '';
+        
+        $result = insert_with_markers( $file, $marker, $rules );
+        
+        if ( $result ) {
+            // Test if site is still accessible
+            $test_url = home_url();
+            $response = wp_remote_get( $test_url, [
+                'timeout'   => 5,
+                'sslverify' => false,
+            ] );
+            
+            // If response is HTTP 500+ (meaning actual server crash)
+            if ( ! is_wp_error( $response ) && wp_remote_retrieve_response_code( $response ) >= 500 ) {
+                // Rollback
+                if ( $original_content !== false && $original_content !== '' ) {
+                    @file_put_contents( $file, $original_content );
+                } else {
+                    // File didn't exist or was empty
+                    @file_put_contents( $file, '' );
+                }
+                return false;
+            }
+        }
+        return $result;
+    }
+
+    /**
      * Applies enabled security hardening rules.
      */
     public function apply_rules() {
@@ -97,14 +130,22 @@ class Hardening {
         $htaccess_file = $upload_dir['basedir'] . '/.htaccess';
         
         $rules = [
+            '<IfModule mod_autoindex.c>',
             'Options -Indexes',
+            '</IfModule>',
             '<Files *.php>',
+            '<IfModule mod_authz_core.c>',
             'Require all denied',
+            '</IfModule>',
+            '<IfModule !mod_authz_core.c>',
+            'Order allow,deny',
+            'Deny from all',
+            '</IfModule>',
             '</Files>'
         ];
         
         require_once ABSPATH . 'wp-admin/includes/misc.php';
-        insert_with_markers( $htaccess_file, 'Nexura Security Uploads', $rules );
+        self::safe_htaccess_update( $htaccess_file, 'Nexura Security Uploads', $rules );
     }
 
     private function unprotect_uploads_directory() {
@@ -112,7 +153,7 @@ class Hardening {
         $htaccess_file = $upload_dir['basedir'] . '/.htaccess';
         
         require_once ABSPATH . 'wp-admin/includes/misc.php';
-        insert_with_markers( $htaccess_file, 'Nexura Security Uploads', [] );
+        self::safe_htaccess_update( $htaccess_file, 'Nexura Security Uploads', [] );
     }
 
     /**
@@ -134,7 +175,13 @@ class Hardening {
         // 4. Disable XML-RPC
         if ( $this->is_rule_enabled( 'NEXURA_htaccess_xmlrpc' ) ) {
             $rules[] = '<Files xmlrpc.php>';
+            $rules[] = '<IfModule mod_authz_core.c>';
             $rules[] = 'Require all denied';
+            $rules[] = '</IfModule>';
+            $rules[] = '<IfModule !mod_authz_core.c>';
+            $rules[] = 'Order allow,deny';
+            $rules[] = 'Deny from all';
+            $rules[] = '</IfModule>';
             $rules[] = '</Files>';
         }
 
@@ -181,7 +228,8 @@ class Hardening {
         // 8. WAF & Auto-Restore (auto_prepend_file)
         // $waf_path declared here (outside if) so .user.ini block below can access it too
         $waf_path = NEXURA_PLUGIN_DIR . 'nexura-waf.php';
-        if ( $this->is_rule_enabled( 'NEXURA_enable_waf' ) && file_exists( $waf_path ) ) {
+        $is_apache_mod = ( strpos( php_sapi_name(), 'apache' ) !== false );
+        if ( $this->is_rule_enabled( 'NEXURA_enable_waf' ) && file_exists( $waf_path ) && $is_apache_mod ) {
             $rules[] = '<IfModule mod_php.c>';
             $rules[] = 'php_value auto_prepend_file "' . $waf_path . '"';
             $rules[] = '</IfModule>';
@@ -208,7 +256,7 @@ class Hardening {
             }
         }
         
-        insert_with_markers( $htaccess_file, 'Nexura Security', $rules );
+        self::safe_htaccess_update( $htaccess_file, 'Nexura Security', $rules );
         
         // Write to .user.ini for CGI/FastCGI/Litespeed servers (cPanel, Nginx, etc.)
         $user_ini_file = get_home_path() . '.user.ini';

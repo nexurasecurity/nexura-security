@@ -3,7 +3,7 @@ Contributors: nexurasecurity, freemius
 Tags: security, malware scanner, firewall, two factor authentication, brute force protection
 Requires at least: 5.8
 Tested up to: 7.0.1
-Stable tag: 1.0.14
+Stable tag: 1.0.15
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -277,6 +277,12 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 ---
 
 == Changelog ==
+
+= 1.0.15 =
+* **Important Bug Fix — No More "Website Down" After Saving Settings:** Some users on certain hosting providers (like Bluehost, HostGator, and SiteGround) experienced an HTTP 500 error after enabling the Web Application Firewall. We've completely fixed this! Your site will now stay online no matter which hosting you use.
+* **Smart Auto-Recovery:** We've added a new safety net to the plugin. If a security setting ever causes an issue on your server, the plugin will now automatically detect it within seconds and quietly undo the change — so your website stays live without you having to do anything.
+* **Better Spam Protection:** Our comment spam blocker is now even smarter. We've added 8 new spam link domains to the blocklist that bots were actively using to sneak through (`shorturl.fm`, `t.ly`, `goo.su` and more). Spam comments with these links will now be blocked automatically before they ever appear on your site.
+* **Pro Feature Safety Upgrade:** The same "no more website crashes" fix has been applied to the Pro Server Lock feature, making it safe to use on all types of hosting environments.
 
 = 1.0.14 =
 * **Enterprise WooCommerce Security Module:** Complete overhaul providing granular protection against Checkout Abuse, Cart/Coupon spam, and Fake Registrations using Honeypots and advanced Rate Limiting. Also blocks WooCommerce REST API scraping and account enumeration, while automatically whitelisting legitimate webhooks from Stripe, PayPal, and Mollie.

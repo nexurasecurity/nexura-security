@@ -1,4 +1,4 @@
-﻿msgid ""
+msgid ""
 msgstr ""
 "Project-Id-Version: Nexura Security 1.0.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/nexura-security\n"
@@ -13,13 +13,13 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 
 msgid "Dashboard"
-msgstr "ä»ªè¡¨æ¿"
+msgstr "仪表板"
 
 msgid "Malware Scan"
-msgstr "æ¶æ„è½¯ä»¶æ‰«æ"
+msgstr "恶意软件扫描"
 
 msgid "Settings"
-msgstr "è®¾ç½®"
+msgstr "设置"
 
 msgid "Blocked IPs"
-msgstr "è¢«é˜»æ­¢çš„IP"
+msgstr "被阻止的IP"

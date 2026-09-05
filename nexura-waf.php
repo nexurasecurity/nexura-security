@@ -12,12 +12,13 @@ if ( basename( __FILE__ ) === basename( $_SERVER['SCRIPT_FILENAME'] ?? '' ) ) {
 }
 
 if ( ! defined( 'NEXURA_WAF_LOG_DIR' ) ) {
-    if ( function_exists( 'wp_upload_dir' ) ) {
-        $upload_dir = wp_upload_dir();
-        define( 'NEXURA_WAF_LOG_DIR', $upload_dir['basedir'] . '/nexura-security' );
-    } else {
-        define( 'NEXURA_WAF_LOG_DIR', dirname( dirname( dirname( __DIR__ ) ) ) . '/wp-content/uploads/nexura-security' );
-    }
+    // Pure PHP path detection — no WordPress API, safe before WP loads.
+    // Walk up from: wp-content/plugins/nexura-security/nexura-waf.php
+    //           to: wp-content/uploads/nexura-security
+    $nexura_waf_uploads = dirname( dirname( dirname( __DIR__ ) ) ) . DIRECTORY_SEPARATOR
+        . 'wp-content' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'nexura-security';
+    define( 'NEXURA_WAF_LOG_DIR', $nexura_waf_uploads );
+    unset( $nexura_waf_uploads );
 }
 
 class NEXURA_Endpoint_WAF {
@@ -91,12 +92,18 @@ class NEXURA_Endpoint_WAF {
 
     /**
      * Tiered IP Ban Check (APCu RAM -> Local JSON Cache).
+     *
+     * APCu cache is validated against the 30-day expiry on every check so that
+     * an IP whose ban has expired in the JSON file is not kept banned indefinitely
+     * by a stale APCu entry (which has a 1-hour TTL of its own).
      */
     private function is_ip_banned( $ip ) {
         if ( function_exists( 'apcu_fetch' ) ) {
             $banned_ram = apcu_fetch( 'nexura_banned_ips' );
-            if ( is_array( $banned_ram ) ) {
-                return isset( $banned_ram[ $ip ] );
+            if ( is_array( $banned_ram ) && isset( $banned_ram[ $ip ] ) ) {
+                // Validate expiry even for cached data to avoid stale bans.
+                $thirty_days_ago = time() - 2592000;
+                return $banned_ram[ $ip ] >= $thirty_days_ago;
             }
         }
 
@@ -151,17 +158,15 @@ class NEXURA_Endpoint_WAF {
             $context_signals[] = 'Login Endpoint';
         }
 
-        // Authenticated User Discount (Supports WP Auth Cookie check early before WP loads)
+        // Authenticated User Discount.
+        // Only granted when WordPress has fully loaded and can verify the session.
+        // We do NOT use the auth cookie here: an attacker can forge
+        // 'wordpress_logged_in_*' to reduce their risk score by 25 points,
+        // potentially evading detection thresholds (e.g. bringing score from
+        // 80 → 55, skipping a hard block entirely).
         $is_logged_in = false;
         if ( function_exists( 'is_user_logged_in' ) && is_user_logged_in() ) {
             $is_logged_in = true;
-        } else {
-            foreach ( $_COOKIE as $cookie_name => $cookie_val ) {
-                if ( strpos( $cookie_name, 'wordpress_logged_in_' ) === 0 && ! empty( $cookie_val ) ) {
-                    $is_logged_in = true;
-                    break;
-                }
-            }
         }
 
         if ( $is_logged_in ) {
@@ -173,7 +178,13 @@ class NEXURA_Endpoint_WAF {
         $enable_bots = $this->settings['NEXURA_enable_bot_protection'] ?? 1;
         if ( $enable_bots ) {
             $lower_ua = strtolower( $user_agent );
-            $bad_bots = ['ahrefsbot', 'semrushbot', 'mj12bot', 'dotbot', 'petalbot', 'baiduspider', 'curl', 'python-requests', 'wget', 'libwww-perl', 'nmap', 'sqlmap', 'zmeu'];
+            // Only include bots that are unambiguously malicious or never used by
+            // legitimate services. curl/wget/python-requests are intentionally
+            // excluded because they are widely used by uptime monitors, CI/CD
+            // pipelines, and API clients — blocking them causes false positives.
+            $bad_bots = ['ahrefsbot', 'semrushbot', 'mj12bot', 'dotbot', 'petalbot',
+                         'baiduspider', 'libwww-perl', 'nmap', 'sqlmap', 'zmeu',
+                         'masscan', 'zgrab', 'nikto', 'dirbuster', 'nuclei'];
             foreach ( $bad_bots as $bot ) {
                 if ( strpos( $lower_ua, $bot ) !== false ) {
                     $risk_score += 30;
@@ -184,19 +195,39 @@ class NEXURA_Endpoint_WAF {
         }
 
         // Gather payloads safely
-        $payloads = [ $request_uri, $query_string, $user_agent ];
-        $raw_input = @file_get_contents( 'php://input' );
-        if ( $raw_input ) {
-            $payloads[] = substr( $raw_input, 0, 32768 );
+        // Total inspection budget: 256 KB across ALL payloads combined.
+        // This prevents memory exhaustion attacks via many large parameters.
+        $inspection_budget = 262144; // 256 KB
+        $budget_used       = 0;
+
+        $payloads   = [];
+        $header_str = $request_uri . $query_string . $user_agent;
+        $payloads[] = substr( $header_str, 0, min( strlen( $header_str ), $inspection_budget ) );
+        $budget_used += strlen( end( $payloads ) );
+
+        if ( $budget_used < $inspection_budget ) {
+            $raw_input = @file_get_contents( 'php://input' );
+            if ( $raw_input ) {
+                $allowed   = $inspection_budget - $budget_used;
+                $chunk     = substr( $raw_input, 0, min( 32768, $allowed ) );
+                $payloads[]  = $chunk;
+                $budget_used += strlen( $chunk );
+            }
         }
 
-        // Add parameters without blanket generic word matching
-        $input_data = array_merge( $_GET, $_POST, $_COOKIE ); // phpcs:ignore WordPress.Security.NonceVerification
-        array_walk_recursive( $input_data, function( $item ) use ( &$payloads ) {
-            if ( is_string( $item ) && strlen( $item ) > 2 ) {
-                $payloads[] = substr( $item, 0, 16384 );
-            }
-        });
+        // Add GET/POST/COOKIE parameters under remaining budget
+        if ( $budget_used < $inspection_budget ) {
+            $input_data = array_merge( $_GET, $_POST, $_COOKIE ); // phpcs:ignore WordPress.Security.NonceVerification
+            array_walk_recursive( $input_data, function( $item ) use ( &$payloads, &$budget_used, $inspection_budget ) {
+                if ( $budget_used >= $inspection_budget ) return;
+                if ( is_string( $item ) && strlen( $item ) > 2 ) {
+                    $allowed    = $inspection_budget - $budget_used;
+                    $chunk      = substr( $item, 0, min( 16384, $allowed ) );
+                    $payloads[] = $chunk;
+                    $budget_used += strlen( $chunk );
+                }
+            });
+        }
 
         // 🛡️ PRODUCTION-GRADE CONTEXTUAL ATTACK SIGNATURES (ZERO Standalone Word Matching)
         $signal_rules = [
@@ -209,7 +240,11 @@ class NEXURA_Endpoint_WAF {
             
             // Contextual SQLi Rules (NO standalone 'select', 'insert', 'update', 'delete')
             'SQLi UNION SELECT'          => ['score' => 45, 'pattern' => '/\bunion\s+(all\s+)?select\b/i'],
-            'SQLi Boolean Tautology'     => ['score' => 40, 'pattern' => '/\b(or|and)\b\s+[\'"]?[a-zA-Z0-9]+[\'"]?\s*=\s*[\'"]?[a-zA-Z0-9]+[\'"]?/i'],
+            // SQLi Boolean Tautology — tightened to require numeric/quoted literal
+            // on BOTH sides of the = operator AND the classic '1'='1' / 1=1 pattern,
+            // which dramatically cuts false-positives from legitimate content like
+            // "status=active" or "role=admin" in API payloads.
+            'SQLi Boolean Tautology' => ['score' => 40, 'pattern' => '/\b(or|and)\b\s+[\'"]?\d+[\'"]?\s*=\s*[\'"]?\d+[\'"]?/i'],
             'SQLi Functions & Schema'    => ['score' => 45, 'pattern' => '/(\bselect\b\s+.+\s+\bfrom\b|\bsleep\s*\(\s*\d+\s*\)|\bbenchmark\s*\(|\binformation_schema\b|\bextractvalue\s*\(|\bupdatexml\s*\()/i'],
             'SQLi Comment Injection'     => ['score' => 35, 'pattern' => '/(\/\*!.*\*\/|--\s*$|#\s*$)/i'],
 
@@ -223,8 +258,27 @@ class NEXURA_Endpoint_WAF {
 
         $triggered_signals = [];
 
-        // Admin Content Exemption Context (Gutenberg / Post editing for logged in admins)
-        if ( ($is_admin_post || $is_gutenberg_api) && function_exists('is_user_logged_in') && is_user_logged_in() && current_user_can('edit_posts') ) {
+        // Admin Content Exemption Context (Gutenberg / Post editing for verified admins).
+        //
+        // SECURITY: We do NOT fall back to cookie inspection when WordPress has not
+        // loaded yet. An attacker can forge any cookie header (the cookie is never
+        // cryptographically validated here), so granting WAF exemptions based on an
+        // unverified cookie would allow bypassing XSS/SQLi inspection entirely.
+        //
+        // If WordPress has loaded, we verify via is_user_logged_in() + capability
+        // check. Otherwise we apply the full rule-set — a safe default.
+        $is_wp_admin_context = false;
+        if ( $is_admin_post || $is_gutenberg_api ) {
+            if (
+                function_exists( 'is_user_logged_in' ) && is_user_logged_in()
+                && function_exists( 'current_user_can' ) && current_user_can( 'edit_posts' )
+            ) {
+                $is_wp_admin_context = true;
+            }
+            // No cookie fallback — forged cookies would bypass WAF inspection.
+        }
+
+        if ( $is_wp_admin_context ) {
             // Only inspect high confidence shell/RFI/PHP execution signatures
             $critical_rules = [
                 'PHP Code Execution Payload'  => $signal_rules['PHP Code Execution Payload'],
@@ -249,21 +303,46 @@ class NEXURA_Endpoint_WAF {
             }
         }
 
-        // Cap negative score bypass for explicit high confidence attack patterns
-        $high_confidence_signals = ['Known Vulnerability Exploit', 'PHP Code Execution Payload', 'Remote File Inclusion', 'Command Injection', 'SQLi UNION SELECT'];
-        $has_high_confidence = false;
-        foreach ( $high_confidence_signals as $hc_signal ) {
-            if ( isset( $triggered_signals[ $hc_signal ] ) ) {
-                $has_high_confidence = true;
+        // ── Score Floor Rules ─────────────────────────────────────────────────
+        // Any single unambiguous attack signal must reach at minimum a SOFT BLOCK
+        // (tier 60) regardless of context discounts (e.g. low base score).
+        // This prevents a negative context discount from absorbing the penalty.
+
+        // Tier 80 floor: critically dangerous, always hard-block.
+        $critical_signals = [
+            'Known Vulnerability Exploit', 'PHP Code Execution Payload',
+            'Remote File Inclusion',       'Command Injection',
+            'SQLi UNION SELECT',
+        ];
+        foreach ( $critical_signals as $sig ) {
+            if ( isset( $triggered_signals[ $sig ] ) ) {
+                if ( $risk_score < 80 ) $risk_score = 80;
                 break;
             }
         }
 
-        if ( $has_high_confidence && $risk_score < 80 ) {
-            $risk_score = 80;
+        // Tier 60 floor: serious single signals — soft-block at minimum.
+        $serious_signals = [
+            'Suspicious HTML Script Tag',   'Event Handler Injection',
+            'External Script Payload',      'Suspicious JS Protocol',
+            'SQLi Boolean Tautology',       'SQLi Functions & Schema',
+            'SQLi Comment Injection',       'Path Traversal Probe',
+            'Hex/Base64 Obfuscation',
+        ];
+        foreach ( $serious_signals as $sig ) {
+            if ( isset( $triggered_signals[ $sig ] ) ) {
+                if ( $risk_score < 60 ) $risk_score = 60;
+                break;
+            }
+        }
+
+        // Tier 60 floor for scanner/attack bots.
+        if ( in_array( 'Known Malicious Bot', $context_signals, true ) ) {
+            if ( $risk_score < 60 ) $risk_score = 60;
         }
 
         $risk_score = max( 0, $risk_score );
+
 
         // Action Tiers
         if ( $risk_score >= 100 ) {
@@ -355,49 +434,89 @@ class NEXURA_Endpoint_WAF {
         $content_type = $_SERVER['CONTENT_TYPE'] ?? '';
         if ( strpos( $accept, 'application/json' ) !== false || strpos( $content_type, 'application/json' ) !== false ) {
             header( 'Content-Type: application/json' );
-            echo json_encode( ['error' => 'Access Denied by Nexura WAF', 'reason' => $reason, 'code' => 'forbidden', 'status' => $status_code] );
+            // Do NOT expose the rule name/reason to the attacker.
+            echo json_encode( ['error' => 'Access Denied', 'code' => 'forbidden', 'status' => $status_code] );
         } else {
             echo '<!DOCTYPE html><html><head><title>Access Denied</title></head>';
             echo '<body style="font-family:system-ui, sans-serif; text-align:center; padding: 50px; background:#0f172a; color:#fff;">';
             echo '<h1 style="color:#ef4444;">Access Denied</h1>';
             echo '<p>Your request has been blocked by Nexura Security <strong>Endpoint WAF</strong>.</p>';
-            echo '<p style="font-size: 14px; color: #94a3b8; margin-top: 20px;">Reason: ' . htmlspecialchars( $reason ) . '</p>';
+            // Intentionally omit $reason — do not leak which rule triggered to attacker.
             echo '<p style="font-size: 14px; color: #94a3b8;">Your IP: ' . htmlspecialchars( $ip ) . '</p>';
             echo '</body></html>';
         }
         exit;
     }
 
+    /**
+     * Record a strike against an IP and promote to ban when threshold is reached.
+     *
+     * Uses atomic temp-file + rename to avoid partial writes from concurrent
+     * requests. On Windows rename() is not atomic, but the LOCK_EX on the temp
+     * write still prevents the most common corruption scenario.
+     */
     private function apply_strikes( $ip, $strike_count = 1 ) {
         $strikes_file = NEXURA_WAF_LOG_DIR . '/strikes.json';
-        $strikes = file_exists( $strikes_file ) ? ( json_decode( @file_get_contents( $strikes_file ), true ) ?: [] ) : [];
-        
+        $tmp_file     = $strikes_file . '.tmp.' . getmypid();
+
+        // Read current state.
+        $strikes = [];
+        if ( file_exists( $strikes_file ) ) {
+            $raw = @file_get_contents( $strikes_file );
+            if ( $raw !== false ) {
+                $strikes = json_decode( $raw, true ) ?: [];
+            }
+        }
+
+        // Expire entries older than 10 minutes.
         $ten_mins_ago = time() - 600;
         foreach ( $strikes as $s_ip => $data ) {
             if ( ! isset( $data['time'] ) || $data['time'] < $ten_mins_ago ) {
-                unset( $strikes[$s_ip] );
+                unset( $strikes[ $s_ip ] );
             }
         }
-        
-        if ( ! isset( $strikes[$ip] ) ) {
-            $strikes[$ip] = [ 'count' => 0, 'time' => time() ];
-        }
-        $strikes[$ip]['count'] += $strike_count;
-        $strikes[$ip]['time'] = time();
-        
-        if ( $strikes[$ip]['count'] >= 5 ) {
-            $ban_file = NEXURA_WAF_LOG_DIR . '/banned_ips.json';
-            $banned_ips = file_exists( $ban_file ) ? ( json_decode( @file_get_contents( $ban_file ), true ) ?: [] ) : [];
-            $banned_ips[$ip] = time();
 
+        if ( ! isset( $strikes[ $ip ] ) ) {
+            $strikes[ $ip ] = [ 'count' => 0, 'time' => time() ];
+        }
+        $strikes[ $ip ]['count'] += $strike_count;
+        $strikes[ $ip ]['time']   = time();
+
+        if ( $strikes[ $ip ]['count'] >= 5 ) {
+            // Promote to permanent ban.
+            $ban_file = NEXURA_WAF_LOG_DIR . '/banned_ips.json';
+            $ban_tmp  = $ban_file . '.tmp.' . getmypid();
+
+            $banned_ips = [];
+            if ( file_exists( $ban_file ) ) {
+                $raw = @file_get_contents( $ban_file );
+                if ( $raw !== false ) {
+                    $banned_ips = json_decode( $raw, true ) ?: [];
+                }
+            }
+            $banned_ips[ $ip ] = time();
+
+            // Atomic write: write to temp then rename.
+            if ( @file_put_contents( $ban_tmp, json_encode( $banned_ips ), LOCK_EX ) !== false ) {
+                @rename( $ban_tmp, $ban_file );
+            } else {
+                @unlink( $ban_tmp );
+            }
+
+            // Refresh APCu cache with the updated ban list.
             if ( function_exists( 'apcu_store' ) ) {
                 apcu_store( 'nexura_banned_ips', $banned_ips, 3600 );
             }
 
-            @file_put_contents( $ban_file, json_encode( $banned_ips ), LOCK_EX );
-            unset( $strikes[$ip] );
+            unset( $strikes[ $ip ] );
         }
-        @file_put_contents( $strikes_file, json_encode( $strikes ), LOCK_EX );
+
+        // Atomic write for strikes file.
+        if ( @file_put_contents( $tmp_file, json_encode( $strikes ), LOCK_EX ) !== false ) {
+            @rename( $tmp_file, $strikes_file );
+        } else {
+            @unlink( $tmp_file );
+        }
     }
 
     private function log_attack( $reason, $ip ) {
@@ -407,7 +526,31 @@ class NEXURA_Endpoint_WAF {
         }
 
         if ( ! is_dir( NEXURA_WAF_LOG_DIR ) ) {
-            @mkdir( NEXURA_WAF_LOG_DIR, 0755, true ); 
+            @mkdir( NEXURA_WAF_LOG_DIR, 0750, true );
+
+            // --- Protect log directory from direct browser access ---
+
+            // Apache: deny all HTTP access
+            $htaccess = NEXURA_WAF_LOG_DIR . '/.htaccess';
+            if ( ! file_exists( $htaccess ) ) {
+                @file_put_contents(
+                    $htaccess,
+                    "# Nexura Security — deny direct web access to WAF log files\n"
+                    . "<IfModule mod_authz_core.c>\n    Require all denied\n</IfModule>\n"
+                    . "<IfModule !mod_authz_core.c>\n    Order deny,allow\n    Deny from all\n</IfModule>\n",
+                    LOCK_EX
+                );
+            }
+
+            // Nginx / any server: a PHP index that returns 403
+            $index = NEXURA_WAF_LOG_DIR . '/index.php';
+            if ( ! file_exists( $index ) ) {
+                @file_put_contents(
+                    $index,
+                    "<?php http_response_code(403); exit;\n",
+                    LOCK_EX
+                );
+            }
         }
         
         $country = $_SERVER['HTTP_CF_IPCOUNTRY'] ?? 'Unknown';
@@ -431,20 +574,32 @@ class NEXURA_Endpoint_WAF {
         @file_put_contents( $file, json_encode( $attacks ), LOCK_EX );
     }
 
+    /**
+     * Fixed-window rate limiter.
+     *
+     * Stores [hits, window_start] so that the 60-second window is anchored to the
+     * FIRST request in that window, not reset on every subsequent request (which
+     * would create an infinite sliding expiry that never expires for active users).
+     */
     private function check_rate_limit( $ip ) {
-        $transient_key = 'nexura_waf_rate_' . md5( $ip );
-        
-        if ( function_exists( 'apcu_fetch' ) ) {
-            $hits = apcu_fetch( $transient_key );
-            if ( $hits === false ) {
-                apcu_store( $transient_key, 1, $this->rate_limit_window );
-                return false;
-            }
-            apcu_store( $transient_key, $hits + 1, $this->rate_limit_window );
-            return ( $hits + 1 ) > $this->rate_limit_hits;
+        if ( ! function_exists( 'apcu_fetch' ) ) {
+            return false; // APCu unavailable — skip silently.
         }
 
-        return false;
+        $key  = 'nexura_waf_rate_' . md5( $ip );
+        $data = apcu_fetch( $key );
+        $now  = time();
+
+        if ( $data === false || ( $now - $data['start'] ) >= $this->rate_limit_window ) {
+            // New window: store hit count and window start timestamp.
+            apcu_store( $key, [ 'hits' => 1, 'start' => $now ], $this->rate_limit_window + 5 );
+            return false;
+        }
+
+        $data['hits']++;
+        apcu_store( $key, $data, max( 1, $this->rate_limit_window - ( $now - $data['start'] ) + 5 ) );
+
+        return $data['hits'] > $this->rate_limit_hits;
     }
 
     private function check_geo_block( $ip ) {
@@ -454,6 +609,14 @@ class NEXURA_Endpoint_WAF {
         if ( ! file_exists( $blocked_file ) ) return false;
         $blocked_countries = json_decode( @file_get_contents( $blocked_file ), true ) ?: [];
         if ( empty( $blocked_countries ) ) return false;
+
+        // HTTP_CF_IPCOUNTRY is only meaningful when the request actually came
+        // through Cloudflare. Without this check an attacker can spoof any country
+        // code with a custom header and bypass geo-blocking entirely.
+        $remote_addr = trim( $_SERVER['REMOTE_ADDR'] ?? '' );
+        if ( ! $this->is_cloudflare_ip( $remote_addr ) ) {
+            return false; // Not via Cloudflare — country header cannot be trusted.
+        }
 
         $country_code = $_SERVER['HTTP_CF_IPCOUNTRY'] ?? '';
         $country_code = strtoupper( preg_replace( '/[^A-Za-z]/', '', $country_code ) );
@@ -493,25 +656,144 @@ class NEXURA_Endpoint_WAF {
         return false;
     }
 
+    /**
+     * Returns the real visitor IP using only PHP native functions.
+     * CF-Connecting-IP is only trusted when the request originates from a
+     * known Cloudflare IP range (prevents header-spoofing bypasses).
+     * X-Real-IP is only trusted when REMOTE_ADDR is in the configurable
+     * trusted_proxies list (falls back to private-IP detection).
+     * No WordPress functions are used here — safe for early-bootstrap execution.
+     */
     private function get_ip() {
-        if ( isset( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
-            return sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
+        $remote_addr = trim( $_SERVER['REMOTE_ADDR'] ?? '' );
+
+        // Trust CF-Connecting-IP only when the TCP connection comes from Cloudflare.
+        if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) && $this->is_cloudflare_ip( $remote_addr ) ) {
+            $cf_ip = filter_var( trim( $_SERVER['HTTP_CF_CONNECTING_IP'] ), FILTER_VALIDATE_IP );
+            if ( $cf_ip !== false ) {
+                return $cf_ip;
+            }
         }
-        if ( isset( $_SERVER['HTTP_X_REAL_IP'] ) ) {
-            return sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_REAL_IP'] ) );
+
+        // X-Real-IP: trust only when REMOTE_ADDR is a configured trusted proxy.
+        // Falls back to private-IP heuristic when no list is configured.
+        if ( ! empty( $_SERVER['HTTP_X_REAL_IP'] ) && $this->is_trusted_proxy( $remote_addr ) ) {
+            $real_ip = filter_var( trim( $_SERVER['HTTP_X_REAL_IP'] ), FILTER_VALIDATE_IP );
+            if ( $real_ip !== false ) {
+                return $real_ip;
+            }
         }
-        if ( isset( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-            $ips = explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) );
-            return trim( $ips[0] );
+
+        // Fall back to the TCP-level address — always available, never spoofable.
+        $ip = filter_var( $remote_addr, FILTER_VALIDATE_IP );
+        return ( $ip !== false ) ? $ip : '';
+    }
+
+    /**
+     * Returns true when $ip is a known trusted reverse proxy.
+     *
+     * SECURITY: When no trusted_proxies list is configured we do NOT fall back
+     * to a private-IP heuristic. A private REMOTE_ADDR does not guarantee the
+     * host is a trusted proxy — it could be any machine on the same LAN.
+     * Falling back silently would allow any local machine to spoof X-Real-IP.
+     *
+     * Admins must explicitly set trusted_proxies in waf_settings.json:
+     *   { "trusted_proxies": ["127.0.0.1/32", "10.0.0.1/32"] }
+     */
+    private function is_trusted_proxy( string $ip ): bool {
+        $trusted = $this->settings['trusted_proxies'] ?? [];
+
+        if ( empty( $trusted ) || ! is_array( $trusted ) ) {
+            return false; // No explicit list — refuse to guess.
         }
-        return sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ?? '' ) );
+
+        foreach ( $trusted as $cidr ) {
+            if ( strpos( $cidr, '/' ) === false ) {
+                $cidr .= ( strpos( $cidr, ':' ) !== false ) ? '/128' : '/32';
+            }
+            if ( $this->ip_in_cidr( $ip, $cidr ) ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns true when $ip falls within a known Cloudflare IPv4/IPv6 CIDR.
+     * List source: https://www.cloudflare.com/ips/  (updated 2026-06)
+     */
+    private function is_cloudflare_ip( string $ip ): bool {
+        $cf_ranges = [
+            // IPv4
+            '173.245.48.0/20', '103.21.244.0/22', '103.22.200.0/22',
+            '103.31.4.0/22',   '141.101.64.0/18', '108.162.192.0/18',
+            '190.93.240.0/20', '188.114.96.0/20', '197.234.240.0/22',
+            '198.41.128.0/17', '162.158.0.0/15',  '104.16.0.0/13',
+            '104.24.0.0/14',   '172.64.0.0/13',   '131.0.72.0/22',
+            // IPv6
+            '2400:cb00::/32', '2606:4700::/32', '2803:f800::/32',
+            '2405:b500::/32', '2405:8100::/32', '2a06:98c0::/29',
+            '2c0f:f248::/32',
+        ];
+
+        foreach ( $cf_ranges as $cidr ) {
+            if ( $this->ip_in_cidr( $ip, $cidr ) ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** Returns true when $ip is a private or loopback address. */
+    private function is_private_ip( string $ip ): bool {
+        return filter_var(
+            $ip,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        ) === false;
+    }
+
+    /** Pure-PHP CIDR membership test — no extensions required. */
+    private function ip_in_cidr( string $ip, string $cidr ): bool {
+        list( $subnet, $bits ) = explode( '/', $cidr );
+        $bits = (int) $bits;
+
+        if ( strpos( $ip, ':' ) !== false ) {
+            // IPv6
+            $ip_bin     = inet_pton( $ip );
+            $subnet_bin = inet_pton( $subnet );
+            if ( $ip_bin === false || $subnet_bin === false ) return false;
+            $mask = str_repeat( "\xff", (int) ( $bits / 8 ) )
+                  . ( $bits % 8 ? chr( 0xff & ( 0xff << ( 8 - $bits % 8 ) ) ) : '' )
+                  . str_repeat( "\x00", 16 - (int) ceil( $bits / 8 ) );
+            return ( $ip_bin & $mask ) === ( $subnet_bin & $mask );
+        }
+
+        // IPv4
+        $ip_long     = ip2long( $ip );
+        $subnet_long = ip2long( $subnet );
+        if ( $ip_long === false || $subnet_long === false ) return false;
+        $mask_long = $bits === 0 ? 0 : ( -1 << ( 32 - $bits ) );
+        return ( $ip_long & $mask_long ) === ( $subnet_long & $mask_long );
     }
 }
 
 if ( ! function_exists( 'nexura_run_endpoint_waf' ) ) {
     function nexura_run_endpoint_waf() {
-        $waf = new NEXURA_Endpoint_WAF();
-        $waf->run();
+        try {
+            $waf = new NEXURA_Endpoint_WAF();
+            $waf->run();
+        } catch ( \Throwable $e ) {
+            // Fail-open safety: WAF errors must never crash the site.
+            // Log to PHP error log so developers can diagnose silent failures.
+            // This does NOT expose information to end-users.
+            error_log(
+                '[Nexura WAF] Unexpected error — WAF skipped. '
+                . get_class( $e ) . ': ' . $e->getMessage()
+                . ' in ' . $e->getFile() . ':' . $e->getLine()
+            );
+        }
     }
 }
 nexura_run_endpoint_waf();

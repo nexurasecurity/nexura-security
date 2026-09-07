@@ -3,7 +3,7 @@ Contributors: nexurasecurity, freemius
 Tags: security, malware scanner, firewall, two factor authentication, brute force protection
 Requires at least: 5.8
 Tested up to: 7.0.1
-Stable tag: 1.0.16
+Stable tag: 1.0.17
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -278,11 +278,25 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 
 == Changelog ==
 
+= 1.0.17 =
+* **Bug Fix:** Fixed an issue where the malware scanner incorrectly reported "0 issues found" despite detecting malware.
+* **Bug Fix:** Added specialized signatures to detect and clean zero-day obfuscated malware droppers.
+* **Bug Fix:** Fixed a JavaScript crash ("Canvas is already in use") on the dashboard charts.
+* **Bug Fix:** Restored missing backend logic for the WooCommerce XML-RPC Protection toggle.
+* **Bug Fix:** Fixed WooCommerce Coupon Abuse Protection hooks to correctly block automated attacks on all WooCommerce versions.
+
 = 1.0.16 =
 * **Important Bug Fix — No More "Website Down" After Saving Settings:** Some users on certain hosting providers (like Bluehost, HostGator, and SiteGround) experienced an HTTP 500 error after enabling the Web Application Firewall. We've completely fixed this! Your site will now stay online no matter which hosting you use.
 * **Smart Auto-Recovery:** We've added a new safety net to the plugin. If a security setting ever causes an issue on your server, the plugin will now automatically detect it within seconds and quietly undo the change — so your website stays live without you having to do anything.
 * **Better Spam Protection:** Our comment spam blocker is now even smarter. We've added 8 new spam link domains to the blocklist that bots were actively using to sneak through (`shorturl.fm`, `t.ly`, `goo.su` and more). Spam comments with these links will now be blocked automatically before they ever appear on your site.
 * **Pro Feature Safety Upgrade:** The same "no more website crashes" fix has been applied to the Pro Server Lock feature, making it safe to use on all types of hosting environments.
+
+= 1.0.15 =
+* **WAF Hardening — Unified Bootstrap Architecture:** Completely redesigned the WAF loading mechanism to use a fail-safe `nexura-waf-bootstrap.php` proxy file at the server root. This eliminates fatal errors when the plugin folder is renamed, moved, or the Pro version is installed alongside the free version.
+* **Fix — Pro Path Compatibility:** Resolved a fatal error (`Failed opening required 'nexura-security-pro/nexura-waf.php'`) that occurred on sites where the plugin was installed as `nexura-security` while `.htaccess` still referenced the old `nexura-security-pro` path.
+* **Fix — WAF Dashboard API (Pro):** Fixed undefined variable warnings (`$total_activity`, `$recent_attacks`, `$top_countries`, `$error_rate`) in the WAF Analytics REST endpoint that caused the dashboard charts to fail to load on Pro installations.
+* **Fix — DB Optimizer API (Pro):** Fixed `foreach()` on `null` PHP warnings in the DB Optimizer Stats and Table List endpoints, which caused JSON parse errors preventing the Database Optimizer page from loading on some hosting environments.
+* **Enhancement — Old Pro Plugin Auto-Deactivation:** The plugin now automatically detects and deactivates the old standalone `nexura-security-pro` plugin on activation, displaying a clear admin notice to prevent conflicts and fatal errors.
 
 = 1.0.14 =
 * **Enterprise WooCommerce Security Module:** Complete overhaul providing granular protection against Checkout Abuse, Cart/Coupon spam, and Fake Registrations using Honeypots and advanced Rate Limiting. Also blocks WooCommerce REST API scraping and account enumeration, while automatically whitelisting legitimate webhooks from Stripe, PayPal, and Mollie.

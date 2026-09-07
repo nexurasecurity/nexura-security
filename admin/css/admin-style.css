@@ -1557,3 +1557,20 @@ input:disabled ~ .nexura-toggle-slider {
 .nexura-wrap .error {
     display: block !important;
 }
+/* Pagination Styles */
+.nexura-pagination a, .nexura-pagination span {
+    padding: 5px 10px;
+    border: 1px solid var(--nexura-border);
+    border-radius: 4px;
+    text-decoration: none;
+    background: var(--nexura-bg-card);
+    color: var(--nexura-text);
+}
+.nexura-pagination span.current {
+    background: #6366f1;
+    color: #fff;
+    border-color: #6366f1;
+}
+.nexura-pagination a:hover {
+    background: var(--nexura-border);
+}

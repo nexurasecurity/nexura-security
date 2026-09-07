@@ -156,7 +156,7 @@ class DB_Backup {
             wp_die( 'No file specified' );
         }
 
-        $file = sanitize_file_name( wp_unslash( $_GET['file'] ) );
+        $file = basename( sanitize_text_field( wp_unslash( $_GET['file'] ) ) );
         $backup_dir = wp_upload_dir()['basedir'] . '/nexura-backups';
         $filepath = $backup_dir . '/' . $file;
 

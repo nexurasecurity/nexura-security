@@ -226,19 +226,26 @@ class Hardening {
         }
 
         // 8. WAF & Auto-Restore (auto_prepend_file)
-        // $waf_path declared here (outside if) so .user.ini block below can access it too
-        $waf_path = NEXURA_PLUGIN_DIR . 'nexura-waf.php';
-        $is_apache_mod = ( strpos( php_sapi_name(), 'apache' ) !== false );
-        if ( $this->is_rule_enabled( 'NEXURA_enable_waf' ) && file_exists( $waf_path ) && $is_apache_mod ) {
-            $rules[] = '<IfModule mod_php.c>';
-            $rules[] = 'php_value auto_prepend_file "' . $waf_path . '"';
-            $rules[] = '</IfModule>';
-            $rules[] = '<IfModule mod_php7.c>';
-            $rules[] = 'php_value auto_prepend_file "' . $waf_path . '"';
-            $rules[] = '</IfModule>';
-            $rules[] = '<IfModule mod_php8.c>';
-            $rules[] = 'php_value auto_prepend_file "' . $waf_path . '"';
-            $rules[] = '</IfModule>';
+        $actual_waf_path = NEXURA_PLUGIN_DIR . 'nexura-waf.php';
+        $bootstrap_path  = get_home_path() . 'nexura-waf-bootstrap.php';
+        $is_apache_mod   = ( strpos( php_sapi_name(), 'apache' ) !== false );
+        
+        if ( $this->is_rule_enabled( 'NEXURA_enable_waf' ) && file_exists( $actual_waf_path ) ) {
+            // Write the fail-safe bootstrap file
+            $bootstrap_content = "<?php\n// Nexura Security WAF Bootstrap\n// This file is generated automatically. Do not edit.\nif ( file_exists( '" . addslashes( $actual_waf_path ) . "' ) ) {\n    include_once '" . addslashes( $actual_waf_path ) . "';\n}\n";
+            @file_put_contents( $bootstrap_path, $bootstrap_content );
+
+            if ( $is_apache_mod ) {
+                $rules[] = '<IfModule mod_php.c>';
+                $rules[] = 'php_value auto_prepend_file "' . $bootstrap_path . '"';
+                $rules[] = '</IfModule>';
+                $rules[] = '<IfModule mod_php7.c>';
+                $rules[] = 'php_value auto_prepend_file "' . $bootstrap_path . '"';
+                $rules[] = '</IfModule>';
+                $rules[] = '<IfModule mod_php8.c>';
+                $rules[] = 'php_value auto_prepend_file "' . $bootstrap_path . '"';
+                $rules[] = '</IfModule>';
+            }
         }
 
         // Write to file using WordPress native function
@@ -271,8 +278,8 @@ class Hardening {
             $current_ini = str_replace( 'nexura-security-pro', basename( NEXURA_PLUGIN_DIR ), $current_ini );
         }
         
-        if ( $this->is_rule_enabled( 'NEXURA_enable_waf' ) && file_exists( $waf_path ) ) {
-            $new_ini = $ini_marker_start . "auto_prepend_file = '{$waf_path}'\n" . $ini_marker_end;
+        if ( $this->is_rule_enabled( 'NEXURA_enable_waf' ) && file_exists( $bootstrap_path ) ) {
+            $new_ini = $ini_marker_start . "auto_prepend_file = '{$bootstrap_path}'\n" . $ini_marker_end;
             $current_ini = trim( $current_ini ) . "\n\n" . $new_ini;
         }
         

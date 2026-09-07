@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.17] - 2026-09-07
+
+### Professional Report & Malware Remediation
+- **New Feature:** Redesigned Security Reports layout featuring an Executive Summary, visual metric blocks, and actionable remediation advice.
+- **New Feature:** Introduced Malware Scanner File Whitelisting to safely exclude known benign files from subsequent scans.
+- **Enhancement:** Activated Premium features by default for a streamlined deployment experience.
+- **Bug Fix:** Resolved a path validation error that prevented secure downloading of .sql.gz database backups.
+- **Bug Fix:** Addressed a restriction issue preventing wp-config.php from loading in the Malware Scanner Editor during remediation.
+- **Bug Fix:** Optimized malware cleanup routines to strip residual, empty <script> tags after payload removal.
+- **Bug Fix:** Refined PHP payload extraction to prevent syntax errors caused by consecutive PHP opening tags.
+
+---
 ## [1.0.16] - 2026-09-05
 
 ### WAF Production Hardening & False-Positive Fixes

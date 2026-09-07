@@ -5,7 +5,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $cron_audit = new \Nexura_Security\Cron_Audit();
-$results = $cron_audit->get_audit_results();
+$all_results = $cron_audit->get_audit_results();
+
+// Pagination logic
+$per_page     = 15;
+$current_page = isset( $_GET['paged'] ) ? max( 1, intval( $_GET['paged'] ) ) : 1;
+$total_items  = count( $all_results );
+$total_pages  = ceil( $total_items / $per_page );
+$results      = array_slice( $all_results, ( $current_page - 1 ) * $per_page, $per_page );
 ?>
 
 <div class="nexura-card nexura-fade-in">
@@ -70,4 +77,19 @@ $results = $cron_audit->get_audit_results();
             </tbody>
         </table>
     </div>
+
+    <?php if ( $total_pages > 1 ) : ?>
+        <div class="nexura-pagination" style="margin-top: 20px; display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
+            <?php
+            echo paginate_links( [ // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+                'base'      => add_query_arg( 'paged', '%#%' ),
+                'format'    => '',
+                'prev_text' => '&laquo; ' . __( 'Previous', 'nexura-security' ),
+                'next_text' => __( 'Next', 'nexura-security' ) . ' &raquo;',
+                'total'     => $total_pages,
+                'current'   => $current_page,
+            ] );
+            ?>
+        </div>
+    <?php endif; ?>
 </div>

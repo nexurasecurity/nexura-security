@@ -672,7 +672,7 @@ class Scanner {
                             $filename = $file->getFilename();
                             
                             // Whitelist check
-                            $whitelist = [ '/nexura-security/', '/nexura-security-pro/', '/nexura-quarantine/', '/nexura-logs/', '/nexura-backups/', '/wp-rocket/', '/cache/' ];
+                            $whitelist = [ '/nexura-security/', '/nexura-security-pro/', '/nexura-quarantine/', '/nexura-logs/', '/nexura-backups/', '/wp-rocket/', '/cache/' ,'/litespeed-cache/', '/litespeed/' ];
                             $is_whitelisted = false;
                             foreach ( $whitelist as $w_path ) {
                                 if ( strpos( $pathname, $w_path ) !== false ) {
@@ -706,12 +706,14 @@ class Scanner {
                 $recent_files[] = str_replace( ABSPATH, '', $file_path );
                 
                 if ( $use_cloud && file_exists( $file_path ) ) {
-                    // Queue for Cloud Hash check instead of scanning locally
+                    // Queue for Cloud Hash check
                     $hash = md5_file( $file_path );
                     $cloud_batch_hashes[] = $hash;
                     $cloud_batch_files[$hash] = $file_path;
-                } else {
-                    $findings = $this->scan_file( $file_path );
+                }
+                
+                // ALWAYS run local scan heuristics (Hybrid Engine)
+                $findings = $this->scan_file( $file_path );
                     
                     if ( ! empty( $findings ) ) {
                         // 1. Context-Aware Whitelisting for popular vendor libraries
@@ -750,7 +752,7 @@ class Scanner {
                         $this->save_results( $file_path, $findings );
                         $issues += count( $findings );
                     }
-                }
+                // Removed the dangling brace here
             }
 
             // Keep only last 5 for display
@@ -976,6 +978,15 @@ class Scanner {
         
         if ( ! is_readable( $file_path ) ) {
             return $findings;
+        }
+
+        // Check if file is whitelisted
+        $whitelisted = get_option( 'NEXURA_whitelisted_files', [] );
+        if ( ! is_array( $whitelisted ) ) {
+            $whitelisted = [];
+        }
+        if ( in_array( $file_path, $whitelisted, true ) ) {
+            return $findings; // File is safe/ignored by user
         }
 
         // Skip very large files to prevent execution timeouts and high CPU usage.
@@ -1383,12 +1394,17 @@ class Scanner {
     private function analyze_php_b_patterns( $content ) {
         $findings = [];
 
-        // Quick skip for performance: if none of these superglobals or preg_replace are present, no b-doors of these types exist.
+        // Quick skip for performance: check for common backdoor indicators first
         if ( stripos( $content, '$_POST' ) === false && 
              stripos( $content, '$_GET' ) === false && 
              stripos( $content, '$_REQUEST' ) === false && 
              stripos( $content, '$_COOKIE' ) === false && 
-             stripos( $content, 'preg_replace' ) === false ) {
+             stripos( $content, '$_SERVER' ) === false && 
+             stripos( $content, 'preg_replace' ) === false &&
+             stripos( $content, 'wp-vcd' ) === false &&
+             stripos( $content, 'auto-created-admin' ) === false &&
+             stripos( $content, '<!ENTITY' ) === false &&
+             stripos( $content, 'chr(' ) === false ) {
             return $findings;
         }
 

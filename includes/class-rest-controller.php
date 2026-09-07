@@ -59,9 +59,23 @@ class Rest_Controller extends WP_REST_Controller {
             ]
         ] );
 
+        // Whitelist file endpoint
+        register_rest_route( $this->namespace, '/scan/whitelist', [
+            [
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => [ $this, 'whitelist_file' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ]
+        ] );
 
-
-
+        // Unwhitelist file endpoint
+        register_rest_route( $this->namespace, '/scan/unwhitelist', [
+            [
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => [ $this, 'unwhitelist_file' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ]
+        ] );
         // FIM Generate Baseline endpoint
         register_rest_route( $this->namespace, '/fim/init', [
             [
@@ -228,9 +242,22 @@ class Rest_Controller extends WP_REST_Controller {
         $real_abspath = realpath( wp_normalize_path( ABSPATH ) );
         
         if ( $real_path && strpos( $real_path, $real_abspath ) === 0 ) {
-            // Block access to sensitive configuration files
+            // Block access to sensitive configuration files unless they are flagged as infected or already whitelisted
             if ( basename( $real_path ) === 'wp-config.php' || basename( $real_path ) === 'wp-config-sample.php' ) {
-                return false;
+                $whitelisted = get_option( 'NEXURA_whitelisted_files', [] );
+                if ( ! is_array( $whitelisted ) ) {
+                    $whitelisted = [];
+                }
+                
+                if ( ! in_array( $real_path, $whitelisted, true ) ) {
+                    global $wpdb;
+                    $table_name = $wpdb->prefix . 'NEXURA_scan_results';
+                    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                    $is_infected = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table_name} WHERE file_path = %s", $path ) );
+                    if ( ! $is_infected ) {
+                        return false;
+                    }
+                }
             }
             // Block modifying our own security plugin files to prevent bypass
             if ( strpos( $real_path, realpath( NEXURA_PLUGIN_DIR ) ) === 0 ) {
@@ -244,6 +271,67 @@ class Rest_Controller extends WP_REST_Controller {
 
 
 
+
+    /**
+     * Whitelist a file to be ignored by the scanner.
+     */
+    public function whitelist_file( $request ) {
+        $raw_path = sanitize_text_field( $request->get_param( 'file_path' ) );
+        $file_path = $this->get_secure_path( $raw_path );
+        
+        if ( ! $file_path ) {
+            return new \WP_Error( 'invalid_file', 'Invalid file path.', [ 'status' => 400 ] );
+        }
+        
+        $whitelisted = get_option( 'NEXURA_whitelisted_files', [] );
+        if ( ! is_array( $whitelisted ) ) {
+            $whitelisted = [];
+        }
+
+        if ( ! in_array( $file_path, $whitelisted, true ) ) {
+            $whitelisted[] = $file_path;
+            update_option( 'NEXURA_whitelisted_files', $whitelisted, false );
+        }
+        
+        global $wpdb;
+        $wpdb->delete( $wpdb->prefix . 'NEXURA_scan_results', [ 'file_path' => $raw_path ] );
+        wp_cache_delete( 'nexura_scan_counts', 'nexura' );
+        
+        return rest_ensure_response([
+            'success' => true,
+            'message' => 'File whitelisted successfully.'
+        ]);
+    }
+
+    /**
+     * Remove a file from the whitelist.
+     */
+    public function unwhitelist_file( $request ) {
+        $raw_path = sanitize_text_field( $request->get_param( 'file_path' ) );
+        $file_path = $this->get_secure_path( $raw_path );
+        
+        if ( ! $file_path ) {
+            return new \WP_Error( 'invalid_file', 'Invalid file path.', [ 'status' => 400 ] );
+        }
+        
+        $whitelisted = get_option( 'NEXURA_whitelisted_files', [] );
+        if ( ! is_array( $whitelisted ) ) {
+            $whitelisted = [];
+        }
+        
+        $key = array_search( $file_path, $whitelisted, true );
+        if ( $key !== false ) {
+            unset( $whitelisted[$key] );
+            update_option( 'NEXURA_whitelisted_files', array_values( $whitelisted ), false );
+            
+            return rest_ensure_response([
+                'success' => true,
+                'message' => 'File removed from whitelist successfully.'
+            ]);
+        }
+        
+        return new \WP_Error( 'not_found', 'File not found in whitelist.', [ 'status' => 404 ] );
+    }
 
     /**
      * Generate FIM Baseline.

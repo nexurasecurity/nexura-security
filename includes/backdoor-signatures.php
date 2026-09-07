@@ -160,6 +160,13 @@ return [
     // HIGH - Known Malware Signatures
     // -------------------------------------------------------------------------
 
+    'obfuscated_dropper_chr_explode' => [
+        'pattern'     => '/explode\s*\(\s*chr\s*\(\s*\(\s*\d+\s*-\s*\d+\s*\)\s*\)\s*,\s*substr\s*\(/i',
+        'description' => 'Obfuscated malware dropper using math-based chr() and explode() to reconstruct payload.',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
     'wp_vcd_malware' => [
         'pattern'     => '/wp-includes\/wp-vcd|class-wp-vcd|wp_vcd/i',
         'description' => 'WP-VCD malware signature detected — known WordPress malware family.',

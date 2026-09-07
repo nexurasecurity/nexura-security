@@ -372,6 +372,11 @@ jQuery(document).ready(function($) {
             
             // Trigger hook so PRO can add File Path, Line, Action columns
             $(document).trigger('nexura_issues_table_headers', [headers]);
+
+            if (typeof NEXURA_PRO_ajax === 'undefined') {
+                headers.unshift('<th>File Path</th>');
+                headers.push('<th>Action</th>');
+            }
             
             html += '<thead><tr>' + headers.join('') + '</tr></thead>';
             
@@ -420,6 +425,12 @@ jQuery(document).ready(function($) {
 
                 // Trigger hook so PRO can add File Path, Line, Action columns
                 $(document).trigger('nexura_issues_table_row', [rowData, item]);
+                
+                // If PRO is not active, add the File Path and Whitelist Action manually for the Free version
+                if (typeof NEXURA_PRO_ajax === 'undefined') {
+                    rowData.unshift('<td>' + filePathDisplay + '</td>');
+                    rowData.push('<td><button type="button" class="button button-small nexura-whitelist-file" data-file="' + item.file_path + '" style="color: #008a20; border-color: #008a20;">Whitelist</button></td>');
+                }
 
                 html += '<tr>' + rowData.join('') + '</tr>';
             });
@@ -1913,6 +1924,9 @@ jQuery(document).ready(function($) {
         // Malware Trend Chart
         var ctxTrend = document.getElementById('nexura-chart-malware-trend');
         if (ctxTrend && NEXURA_ajax.malware_trend) {
+            var existingTrendChart = Chart.getChart(ctxTrend);
+            if (existingTrendChart) { existingTrendChart.destroy(); }
+            
             new Chart(ctxTrend.getContext('2d'), {
                 type: 'line',
                 data: {
@@ -1954,6 +1968,9 @@ jQuery(document).ready(function($) {
         // File Integrity Chart
         var ctxIntegrity = document.getElementById('nexura-chart-integrity');
         if (ctxIntegrity && NEXURA_ajax.fim_data) {
+            var existingIntegrityChart = Chart.getChart(ctxIntegrity);
+            if (existingIntegrityChart) { existingIntegrityChart.destroy(); }
+            
             var fimData = [NEXURA_ajax.fim_data.core, NEXURA_ajax.fim_data.plugins, NEXURA_ajax.fim_data.themes];
             var hasFim = fimData.reduce(function(a, b){ return a + b; }, 0) > 0;
             
@@ -1995,6 +2012,69 @@ jQuery(document).ready(function($) {
             });
         }
     }
+
+    // --- Whitelist Actions ---
+    $(document).on('click', '.nexura-whitelist-file', function(e) {
+        e.preventDefault();
+        var btn = $(this);
+        var filePath = btn.data('file');
+        
+        if (!confirm('Are you sure you want to whitelist this file? The scanner will ignore it in future scans.')) {
+            return;
+        }
+        
+        btn.prop('disabled', true).text('Working...');
+        
+        $.ajax({
+            url: NEXURA_ajax.rest_url + 'nexura/v1/scan/whitelist',
+            method: 'POST',
+            data: { file_path: filePath },
+            beforeSend: function(xhr) { xhr.setRequestHeader('X-WP-Nonce', NEXURA_ajax.nonce); },
+            success: function(response) {
+                if (response.success) {
+                    btn.closest('tr').fadeOut(400, function() { $(this).remove(); });
+                } else {
+                    alert('Error: ' + response.message);
+                    btn.prop('disabled', false).text('Whitelist');
+                }
+            },
+            error: function(xhr) {
+                alert('Error whitelisting file. Please try again.');
+                btn.prop('disabled', false).text('Whitelist');
+            }
+        });
+    });
+
+    $(document).on('click', '.nexura-unwhitelist-file', function(e) {
+        e.preventDefault();
+        var btn = $(this);
+        var filePath = btn.data('file');
+        
+        if (!confirm('Are you sure you want to remove this file from the whitelist? It will be scanned again in the next run.')) {
+            return;
+        }
+        
+        btn.prop('disabled', true).text('Working...');
+        
+        $.ajax({
+            url: NEXURA_ajax.rest_url + 'nexura/v1/scan/unwhitelist',
+            method: 'POST',
+            data: { file_path: filePath },
+            beforeSend: function(xhr) { xhr.setRequestHeader('X-WP-Nonce', NEXURA_ajax.nonce); },
+            success: function(response) {
+                if (response.success) {
+                    btn.closest('tr').fadeOut(400, function() { $(this).remove(); });
+                } else {
+                    alert('Error: ' + response.message);
+                    btn.prop('disabled', false).text('Remove');
+                }
+            },
+            error: function(xhr) {
+                alert('Error removing file from whitelist. Please try again.');
+                btn.prop('disabled', false).text('Remove');
+            }
+        });
+    });
 
 });
 

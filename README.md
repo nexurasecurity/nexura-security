@@ -5,7 +5,7 @@
   <br><br>
   <img src="https://img.shields.io/badge/Requires_WP-5.8+-blue.svg?style=for-the-badge" alt="Requires WP">
   <img src="https://img.shields.io/badge/Requires_PHP-7.4+-blue.svg?style=for-the-badge" alt="Requires PHP">
-  <img src="https://img.shields.io/badge/Version-1.0.11-orange.svg?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Version-1.0.17-orange.svg?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Tested_up_to-7.0.1-green.svg?style=for-the-badge" alt="Tested WP">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv2-blue.svg?style=for-the-badge" alt="License"></a>
   <br>
@@ -92,3 +92,4 @@ For full details, please review our [Privacy Policy](https://nexurasecurity.com/
 
 Nexura Security is released under the [GPL v2 or later](LICENSE) license.
 This software is provided "as is", without warranty of any kind.
+

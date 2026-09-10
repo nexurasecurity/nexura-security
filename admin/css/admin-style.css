@@ -84,7 +84,6 @@
 
 /* Fix WP Admin body content background overflow */
 #wpbody-content {
-    background: var(--nexura-bg-primary) !important;
     padding-bottom: 0 !important;
 }
 

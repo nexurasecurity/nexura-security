@@ -722,14 +722,14 @@ class Admin {
             \Nexura_Security\Scanner::auto_heal_scan_results();
         }
         
-        $cached_counts = wp_cache_get( 'nexura_scan_counts', 'nexura' );
+        $cached_counts = get_transient( 'nexura_scan_counts' );
         if ( false === $cached_counts ) {
             $high_count   = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table_name} WHERE risk_score = %s", 'High' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
             $medium_count = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$table_name} WHERE risk_score = %s", 'Medium' ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
             $total_count  = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_name}" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
             
             $cached_counts = compact( 'high_count', 'medium_count', 'total_count' );
-            wp_cache_set( 'nexura_scan_counts', $cached_counts, 'nexura', 300 );
+            set_transient( 'nexura_scan_counts', $cached_counts, 300 );
         } else {
             $high_count = $cached_counts['high_count'];
             $medium_count = $cached_counts['medium_count'];
@@ -1009,7 +1009,12 @@ class Admin {
                     </p>
                 <?php else : ?>
                     <p style="margin-top: 0; font-size: 14px; color: #3c434a;">
-                        <?php esc_html_e( 'Your site’s security is looking good. Nexura Security is actively monitoring your website to keep it safe.', 'nexura-security' ); ?>
+                        <?php
+                        echo esc_html__(
+                            "Your site's security is looking good. Nexura Security is actively monitoring your website to keep it safe.",
+                            'nexura-security'
+                        );
+                        ?>
                     </p>
                     <p style="font-size: 14px; color: #3c434a;">
                         <?php 
@@ -1145,4 +1150,5 @@ class Admin {
     }
 
 }
+
 

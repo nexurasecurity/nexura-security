@@ -200,8 +200,9 @@ class Global_Threat_Intel {
                 wp_die( esc_html__( 'Security check failed.', 'nexura-security' ) );
             }
             if ( $this->verify_captcha() ) {
-                // Mark as verified for this session
-                setcookie( 'NEXURA_verified_ip', md5($ip . wp_salt()), time() + 3600, '/' );
+                // Mark as verified for this session.
+                // Use SHA-256 instead of MD5 — collision-resistant for a security cookie.
+                setcookie( 'NEXURA_verified_ip', hash( 'sha256', $ip . wp_salt() ), time() + 3600, '/' );
                 $redirect_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
                 wp_safe_redirect( esc_url_raw( $redirect_uri ) );
                 exit;
@@ -209,7 +210,7 @@ class Global_Threat_Intel {
         }
 
         // If verified, allow
-        if ( isset( $_COOKIE['NEXURA_verified_ip'] ) && $_COOKIE['NEXURA_verified_ip'] === md5($ip . wp_salt()) ) {
+        if ( isset( $_COOKIE['NEXURA_verified_ip'] ) && hash_equals( hash( 'sha256', $ip . wp_salt() ), $_COOKIE['NEXURA_verified_ip'] ) ) {
             return;
         }
 

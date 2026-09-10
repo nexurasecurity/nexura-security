@@ -139,6 +139,7 @@ class NEXURA_Endpoint_WAF {
         $is_login         = ( strpos( $lower_uri, 'wp-login.php' ) !== false );
         $is_ajax          = ( strpos( $lower_uri, 'admin-ajax.php' ) !== false );
         $is_uploads       = ( strpos( $lower_uri, '/uploads/' ) !== false );
+        $is_xmlrpc        = ( strpos( $lower_uri, 'xmlrpc.php' ) !== false );
 
         // Direct Execution Defense for Uploads directory
         if ( $is_uploads && preg_match( '/\.(php|phtml|php3|php4|php5|phps|pht)$/i', $request_uri ) ) {
@@ -156,6 +157,13 @@ class NEXURA_Endpoint_WAF {
         if ( $is_login ) {
             $risk_score += 5;
             $context_signals[] = 'Login Endpoint';
+        }
+
+        // XML-RPC requests carry higher inherent risk: they tunnel method calls
+        // inside XML bodies which bypass standard form-field inspection.
+        if ( $is_xmlrpc ) {
+            $risk_score += 10;
+            $context_signals[] = 'XML-RPC Endpoint';
         }
 
         // Authenticated User Discount.
@@ -291,9 +299,15 @@ class NEXURA_Endpoint_WAF {
 
         foreach ( $payloads as $payload ) {
             if ( empty( $payload ) ) continue;
-            
+
             $inspect_string = substr( $payload, 0, 16384 );
+            // Primary decode: URL-encoded payloads (standard form submissions, GET params).
             $decoded = urldecode( $inspect_string );
+
+            // Secondary decode: HTML/XML entity-encoded payloads.
+            // XML-RPC and some XSS vectors hide attack strings inside HTML entities
+            // e.g. &#x65;&#x76;&#x61;&#x6c; => eval. urldecode() misses these.
+            $decoded = html_entity_decode( $decoded, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 
             foreach ( $signal_rules as $signal_name => $rule ) {
                 if ( ! isset( $triggered_signals[ $signal_name ] ) && preg_match( $rule['pattern'], $decoded ) ) {
@@ -568,7 +582,9 @@ class NEXURA_Endpoint_WAF {
             'ip'      => $ip,
             'reason'  => $reason,
             'country' => $country,
-            'uri'     => isset($_SERVER['REQUEST_URI']) ? filter_var( stripslashes( $_SERVER['REQUEST_URI'] ), FILTER_SANITIZE_URL ) : 'Unknown'
+            'uri'     => isset( $_SERVER['REQUEST_URI'] )
+                ? preg_replace( '/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/', '', $_SERVER['REQUEST_URI'] )
+                : 'Unknown'
         ];
         
         @file_put_contents( $file, json_encode( $attacks ), LOCK_EX );

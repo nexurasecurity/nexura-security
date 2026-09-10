@@ -295,7 +295,7 @@ class Rest_Controller extends WP_REST_Controller {
         
         global $wpdb;
         $wpdb->delete( $wpdb->prefix . 'NEXURA_scan_results', [ 'file_path' => $raw_path ] );
-        wp_cache_delete( 'nexura_scan_counts', 'nexura' );
+        delete_transient( 'nexura_scan_counts' );
         
         return rest_ensure_response([
             'success' => true,
@@ -413,4 +413,5 @@ class Rest_Controller extends WP_REST_Controller {
 
 
 }
+
 

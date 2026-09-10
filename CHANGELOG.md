@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.18] - 2026-09-10
+
+### Security Hardening, Fixes & Enhancements
+- **Security Hardening:** Upgraded security-sensitive MD5 hashes to SHA-256 (CAPTCHA cookies and core file restorer) to prevent cryptographic collisions.
+- **Security Hardening:** Fixed XML-RPC payload inspection to decode HTML/XML entities, catching obfuscated attack strings.
+- **Security Hardening:** Switched Remember Device cookie to use `SameSite=Strict` and constant-time `hash_equals()` comparison.
+- **Bug Fix:** Removed infinite redirect loop caused by conflicting `wp_login` actions with third-party separate-prompt 2FA.
+- **Bug Fix:** Prevented fatal errors on deleted users during 2FA login checks.
+- **Bug Fix:** Handled object cache compatibility by switching scan caching to the WordPress Transient API.
+- **Bug Fix:** Removed deprecated `FILTER_SANITIZE_URL` usage for WAF log tracking.
+- **Enhancement:** Added a visual warning banner when 0 recovery codes are remaining for Two-Factor Authentication.
+- **Enhancement:** Improved multiple hardcoded strings to be properly translatable (i18n) and corrected escaping (`esc_js`, `esc_html__`).
+- **Code Health:** Verified that Nexura Security is not affected by the deprecated `WP_Http_Curl` class, as the core does not use it.
+
+---
+
 ## [1.0.17] - 2026-09-07
 
 ### Professional Report & Malware Remediation

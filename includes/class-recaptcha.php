@@ -145,6 +145,12 @@ class reCAPTCHA {
             return $user; // Not a login attempt
         }
 
+        // Skip reCAPTCHA on the 2FA verification page — no token is present there.
+        $current_action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( $current_action === 'NEXURA_2fa_verify' ) {
+            return $user;
+        }
+
         if ( $this->is_ip_allowlisted() ) {
             return $user;
         }
@@ -202,9 +208,10 @@ class reCAPTCHA {
                 return true;
             }
             
-            // Check IP range (e.g. 192.168.1.*)
+            // Check IP range (e.g. 192.168.1.*) — use preg_quote to safely escape dots.
             if ( strpos( $ip, '*' ) !== false ) {
-                $pattern = str_replace( '*', '.*', $ip );
+                $escaped = preg_quote( str_replace( '*', chr(0), $ip ), '/' );
+                $pattern = str_replace( preg_quote( chr(0), '/' ), '.*', $escaped );
                 if ( preg_match( '/^' . $pattern . '$/', $client_ip ) ) {
                     return true;
                 }

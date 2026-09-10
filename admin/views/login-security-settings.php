@@ -153,7 +153,7 @@ foreach ( $roles as $role_key => $role_data ) {
                     <tr>
                         <th scope="row"><label for="NEXURA_brute_force_max_attempts"><?php esc_html_e( 'Max Login Attempts', 'nexura-security' ); ?></label></th>
                         <td>
-                            <input type="number" name="NEXURA_brute_force_max_attempts" id="NEXURA_brute_force_max_attempts" value="<?php echo esc_attr( get_option( 'NEXURA_brute_force_max_attempts', '5' ) ); ?>" class="regular-text" style="width: 100px;">
+                            <input type="number" name="NEXURA_brute_force_max_attempts" id="NEXURA_brute_force_max_attempts" value="<?php echo esc_attr( get_option( 'NEXURA_brute_force_max_attempts', '5' ) ); ?>" class="regular-text" style="width: 100px;" min="1">
                             <p class="description"><?php esc_html_e( 'Number of allowed failed attempts before the IP is locked out (Default: 5).', 'nexura-security' ); ?></p>
                         </td>
                     </tr>

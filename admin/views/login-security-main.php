@@ -14,6 +14,9 @@ $base_url = admin_url( 'admin.php?page=nexura-login-security' );
         <a href="<?php echo esc_url( add_query_arg( 'tab', '2fa', $base_url ) ); ?>" class="nav-tab <?php echo $active_tab === '2fa' ? 'nav-tab-active' : ''; ?>">
             <?php esc_html_e( 'Two-Factor Authentication', 'nexura-security' ); ?>
         </a>
+        <a href="<?php echo esc_url( add_query_arg( 'tab', 'locked_ips', $base_url ) ); ?>" class="nav-tab <?php echo $active_tab === 'locked_ips' ? 'nav-tab-active' : ''; ?>">
+            <?php esc_html_e( 'Locked IPs', 'nexura-security' ); ?>
+        </a>
         <a href="<?php echo esc_url( add_query_arg( 'tab', 'settings', $base_url ) ); ?>" class="nav-tab <?php echo $active_tab === 'settings' ? 'nav-tab-active' : ''; ?>">
             <?php esc_html_e( 'Settings', 'nexura-security' ); ?>
         </a>
@@ -23,6 +26,8 @@ $base_url = admin_url( 'admin.php?page=nexura-login-security' );
         <?php
         if ( $active_tab === '2fa' ) {
             require NEXURA_PLUGIN_DIR . 'admin/views/2fa-settings.php';
+        } elseif ( $active_tab === 'locked_ips' ) {
+            require NEXURA_PLUGIN_DIR . 'admin/views/login-security-locked-ips.php';
         } elseif ( $active_tab === 'settings' ) {
             require NEXURA_PLUGIN_DIR . 'admin/views/login-security-settings.php';
         }

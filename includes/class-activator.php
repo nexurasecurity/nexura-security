@@ -145,7 +145,7 @@ class Activator {
             // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
             $remaining = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_scans}" );
             update_option( 'NEXURA_scan_issues', $remaining, false );
-            wp_cache_delete( 'nexura_scan_counts', 'nexura' );
+            delete_transient( 'nexura_scan_counts' );
         }
 
         // Generate initial WAF settings for Endpoint WAF
@@ -184,3 +184,4 @@ class Activator {
         @file_put_contents( $settings_file, wp_json_encode( $settings ), LOCK_EX ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
     }
 }
+

@@ -58,25 +58,15 @@ if ( $actual_table_attack_logs && strcasecmp( $actual_table_attack_logs, $table_
     }
     // -------------------------
 
-    $NEXURA_attack_logs = $wpdb->get_results( "SELECT * FROM {$table_attack_logs} ORDER BY id DESC LIMIT 20", ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
-}
+    // Pagination setup
+    $atk_per_page    = 7;
+    $atk_page        = isset( $_GET['atk_page'] ) ? max( 1, (int) $_GET['atk_page'] ) : 1; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+    $atk_offset      = ( $atk_page - 1 ) * $atk_per_page;
+    $atk_total       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_attack_logs}" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
+    $atk_total_pages = max( 1, (int) ceil( $atk_total / $atk_per_page ) );
 
-// Fallback seed data with global international representation if no attacks recorded yet
-if ( empty( $NEXURA_attack_logs ) ) {
-    $NEXURA_attack_logs = [
-        [ 'ip_address' => '218.158.82.197',  'country' => 'South Korea',    'attack_type' => 'BRUTE FORCE ATTACK',   'action_taken' => 'LOCKED OUT', 'timestamp' => current_time( 'mysql' ) ],
-        [ 'ip_address' => '85.208.96.193',   'country' => 'United States',  'attack_type' => 'WAF BLOCK: BAD_BOT',   'action_taken' => 'BLOCKED',    'timestamp' => date( 'Y-m-d H:i:s', strtotime('-1 hours') ) ],
-        [ 'ip_address' => '185.220.101.5',   'country' => 'Germany',        'attack_type' => 'SQL INJECTION ATTEMPT','action_taken' => 'BLOCKED',    'timestamp' => date( 'Y-m-d H:i:s', strtotime('-3 hours') ) ],
-        [ 'ip_address' => '194.26.29.112',   'country' => 'Russia',         'attack_type' => 'XSS PAYLOAD DETECTED', 'action_taken' => 'BLOCKED',    'timestamp' => date( 'Y-m-d H:i:s', strtotime('-5 hours') ) ],
-        [ 'ip_address' => '119.28.51.90',    'country' => 'China',          'attack_type' => 'WAF BLOCK: BAD_BOT',   'action_taken' => 'BLOCKED',    'timestamp' => date( 'Y-m-d H:i:s', strtotime('-8 hours') ) ],
-        [ 'ip_address' => '51.159.60.21',    'country' => 'France',         'attack_type' => 'BRUTE FORCE ATTACK',   'action_taken' => 'LOCKED OUT', 'timestamp' => date( 'Y-m-d H:i:s', strtotime('-10 hours') ) ],
-        [ 'ip_address' => '103.230.104.2',   'country' => 'Bangladesh',     'attack_type' => 'LOGIN RATE LIMIT',     'action_taken' => 'BLOCKED',    'timestamp' => date( 'Y-m-d H:i:s', strtotime('-12 hours') ) ],
-        [ 'ip_address' => '114.119.130.4',   'country' => 'Japan',          'attack_type' => 'WAF BLOCK: BAD_BOT',   'action_taken' => 'BLOCKED',    'timestamp' => date( 'Y-m-d H:i:s', strtotime('-14 hours') ) ],
-        [ 'ip_address' => '177.136.252.1',   'country' => 'Brazil',         'attack_type' => 'BRUTE FORCE ATTACK',   'action_taken' => 'LOCKED OUT', 'timestamp' => date( 'Y-m-d H:i:s', strtotime('-16 hours') ) ],
-        [ 'ip_address' => '185.190.140.2',   'country' => 'United Kingdom', 'attack_type' => 'PATH TRAVERSAL PROBE', 'action_taken' => 'BLOCKED',    'timestamp' => date( 'Y-m-d H:i:s', strtotime('-18 hours') ) ],
-    ];
+    $NEXURA_attack_logs = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$table_attack_logs} ORDER BY id DESC LIMIT %d OFFSET %d", $atk_per_page, $atk_offset ), ARRAY_A ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
 }
-
 $NEXURA_circumference = 2 * 3.14159 * 65;
 $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circumference;
 ?>
@@ -417,6 +407,58 @@ $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circu
             </table>
         </div>
 
+        <?php if ( isset( $atk_total_pages ) && $atk_total_pages > 1 ) : ?>
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 14px; flex-wrap: wrap; gap: 10px;">
+            <div style="font-size: 12px; color: #64748b;">
+                <?php
+                $atk_start = ( ( $atk_page - 1 ) * $atk_per_page ) + 1;
+                $atk_end   = min( $atk_page * $atk_per_page, $atk_total );
+                /* translators: 1: first row, 2: last row, 3: total rows */
+                printf( esc_html__( 'Showing %1$d–%2$d of %3$d entries', 'nexura-security' ), $atk_start, $atk_end, $atk_total );
+                ?>
+            </div>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <?php
+                $base_url = remove_query_arg( 'atk_page' );
+                // Previous
+                if ( $atk_page > 1 ) :
+                    ?>
+                    <a href="<?php echo esc_url( add_query_arg( 'atk_page', $atk_page - 1, $base_url ) ); ?>" style="padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: #cbd5e1; background: rgba(51,65,85,0.6); border: 1px solid #334155; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='rgba(99,102,241,0.2)'" onmouseout="this.style.background='rgba(51,65,85,0.6)'">&laquo; <?php esc_html_e( 'Prev', 'nexura-security' ); ?></a>
+                <?php endif; ?>
+
+                <?php
+                // Page numbers — show max 7 around current
+                $range   = 3;
+                $start_p = max( 1, $atk_page - $range );
+                $end_p   = min( $atk_total_pages, $atk_page + $range );
+                if ( $start_p > 1 ) :
+                    ?>
+                    <a href="<?php echo esc_url( add_query_arg( 'atk_page', 1, $base_url ) ); ?>" style="padding: 5px 10px; border-radius: 6px; font-size: 12px; color: #94a3b8; background: rgba(51,65,85,0.4); border: 1px solid #334155; text-decoration: none;">1</a>
+                    <?php if ( $start_p > 2 ) echo '<span style="padding: 5px 4px; color:#475569;">…</span>'; ?>
+                <?php endif; ?>
+
+                <?php for ( $p = $start_p; $p <= $end_p; $p++ ) :
+                    $is_current = ( $p === $atk_page );
+                    $p_style = $is_current
+                        ? 'padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; color: #fff; background: #6366f1; border: 1px solid #6366f1; text-decoration: none;'
+                        : 'padding: 5px 10px; border-radius: 6px; font-size: 12px; color: #94a3b8; background: rgba(51,65,85,0.4); border: 1px solid #334155; text-decoration: none;';
+                    ?>
+                    <a href="<?php echo esc_url( add_query_arg( 'atk_page', $p, $base_url ) ); ?>" style="<?php echo esc_attr( $p_style ); ?>"><?php echo (int) $p; ?></a>
+                <?php endfor; ?>
+
+                <?php if ( $end_p < $atk_total_pages ) :
+                    if ( $end_p < $atk_total_pages - 1 ) echo '<span style="padding: 5px 4px; color:#475569;">…</span>';
+                    ?>
+                    <a href="<?php echo esc_url( add_query_arg( 'atk_page', $atk_total_pages, $base_url ) ); ?>" style="padding: 5px 10px; border-radius: 6px; font-size: 12px; color: #94a3b8; background: rgba(51,65,85,0.4); border: 1px solid #334155; text-decoration: none;"><?php echo (int) $atk_total_pages; ?></a>
+                <?php endif; ?>
+
+                <?php if ( $atk_page < $atk_total_pages ) : ?>
+                    <a href="<?php echo esc_url( add_query_arg( 'atk_page', $atk_page + 1, $base_url ) ); ?>" style="padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; color: #cbd5e1; background: rgba(51,65,85,0.6); border: 1px solid #334155; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.background='rgba(99,102,241,0.2)'" onmouseout="this.style.background='rgba(51,65,85,0.6)'"><?php esc_html_e( 'Next', 'nexura-security' ); ?> &raquo;</a>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endif; ?>
+
         <!-- Smart JavaScript for Country Detection via Proprietary Cloudflare Worker -->
         <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -448,25 +490,19 @@ $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circu
                             const flagUrl = 'https://flagcdn.com/16x12/' + countryMap[ip].code.toLowerCase() + '.png';
                             cell.innerHTML = '<img src="' + flagUrl + '" alt="' + countryMap[ip].code + '" style="margin-right: 6px; vertical-align: middle;"> ' + countryMap[ip].country;
                         } else if (cell.textContent.trim() === 'Unknown (Pro)') {
-                            cell.innerHTML = '<span style="color: var(--nexura-text-muted);">Unknown</span>';
+                            cell.innerHTML = '<span style="color: #64748b; font-size: 12px; font-style: italic;">Unknown</span>';
                         }
                     });
                 })
-                .catch(err => {
-                    countryCells.forEach(cell => {
-                        if (cell.textContent.trim() === 'Unknown (Pro)') {
-                            cell.innerHTML = '<span style="color: var(--nexura-text-muted);">Unknown</span>';
-                        }
-                    });
-                });
+                .catch(err => console.error('GeoIP Error:', err));
             }
         });
         </script>
 
     <?php else : ?>
-        <div style="text-align: center; padding: 40px 0; color: var(--nexura-text-muted);">
-            <div style="margin-bottom: 12px; display: flex; justify-content: center;"><svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#10b981;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg></div>
-            <p style="font-size: 15px; font-weight: 600;">No attacks blocked recently.</p>
+        <div style="text-align: center; padding: 40px 0; color: var(--nexura-text-muted); border: 1px solid var(--nexura-border); border-radius: 8px; background: rgba(15, 23, 42, 0.4);">
+            <div style="margin-bottom: 12px; display: flex; justify-content: center;"><svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="color:#6366f1; opacity:0.6;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></div>
+            <p style="font-size: 15px; font-weight: 600;">No attacks recorded.</p>
             <p style="font-size: 13px;">Your site traffic is clean.</p>
         </div>
     <?php endif; ?>

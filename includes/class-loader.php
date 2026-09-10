@@ -31,7 +31,7 @@ class Loader {
                 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
                 $remaining = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table_scans}" );
                 update_option( 'NEXURA_scan_issues', $remaining, false );
-                wp_cache_delete( 'nexura_scan_counts', 'nexura' );
+                delete_transient( 'nexura_scan_counts' );
             }
             update_option( 'NEXURA_db_version', '1.0.12' );
         }

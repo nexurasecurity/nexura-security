@@ -168,15 +168,8 @@ class Audit_Logger {
      * Gets the real IP address of the user.
      */
     private function get_client_ip() {
-        $ip = '127.0.0.1';
-        if ( ! empty( $_SERVER['HTTP_CLIENT_IP'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-            $ip = wp_unslash( $_SERVER['HTTP_CLIENT_IP'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-        } elseif ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-            $ips = explode( ',', wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-            $ip = trim( $ips[0] );
-        } elseif ( ! empty( $_SERVER['REMOTE_ADDR'] ) ) { // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-            $ip = wp_unslash( $_SERVER['REMOTE_ADDR'] ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
-        }
-        return sanitize_text_field( $ip );
+        // REMOTE_ADDR is the only header that cannot be spoofed — always use it as the base.
+        $ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '127.0.0.1';
+        return $ip;
     }
 }

@@ -105,14 +105,14 @@ class Two_Factor_Auth {
         check_ajax_referer( 'nexura-admin-ajax-nonce', 'security' );
         if ( !is_user_logged_in() ) {
             wp_send_json_error( [
-                'message' => 'Not logged in.',
+                'message' => __( 'Not logged in.', 'nexura-security' ),
             ] );
         }
         $code = ( isset( $_POST['code'] ) ? preg_replace( '/[^0-9]/', '', sanitize_text_field( wp_unslash( $_POST['code'] ) ) ) : '' );
         $secret = ( isset( $_POST['secret'] ) ? sanitize_text_field( wp_unslash( $_POST['secret'] ) ) : '' );
         if ( empty( $code ) || empty( $secret ) ) {
             wp_send_json_error( [
-                'message' => 'Invalid input.',
+                'message' => __( 'Invalid input.', 'nexura-security' ),
             ] );
         }
         $user_id = get_current_user_id();
@@ -123,12 +123,12 @@ class Two_Factor_Auth {
             $raw_codes = $this->generate_recovery_codes();
             $this->save_recovery_codes( $user_id, $raw_codes );
             wp_send_json_success( [
-                'message'        => '2FA Enabled successfully!',
+                'message'        => __( '2FA enabled successfully!', 'nexura-security' ),
                 'recovery_codes' => $raw_codes,
             ] );
         } else {
             wp_send_json_error( [
-                'message' => 'Invalid code. Please try again.',
+                'message' => __( 'Invalid code. Please try again.', 'nexura-security' ),
             ] );
         }
     }
@@ -150,7 +150,7 @@ class Two_Factor_Auth {
             $redirect_url = site_url( 'wp-login.php?action=NEXURA_2fa_verify&token=' . $token );
             if ( isset( $_REQUEST['redirect_to'] ) ) {
                 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-                $redirect_url = add_query_arg( 'redirect_to', urlencode( sanitize_text_field( wp_unslash( $_REQUEST['redirect_to'] ) ) ), $redirect_url );
+                $redirect_url = add_query_arg( 'redirect_to', rawurlencode( sanitize_text_field( wp_unslash( $_REQUEST['redirect_to'] ) ) ), $redirect_url );
                 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
             }
             wp_safe_redirect( $redirect_url );
@@ -165,17 +165,31 @@ class Two_Factor_Auth {
         $token = ( isset( $_GET['token'] ) ? sanitize_text_field( wp_unslash( $_GET['token'] ) ) : '' );
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended
         if ( empty( $token ) ) {
-            wp_die( 'Invalid 2FA token.' );
+            wp_die( esc_html__( 'Invalid 2FA token.', 'nexura-security' ), esc_html__( '2FA Error', 'nexura-security' ), [
+                'response' => 403,
+            ] );
         }
         $user_id = get_transient( 'NEXURA_2fa_token_' . $token );
         if ( !$user_id ) {
-            wp_die( '2FA session expired. Please log in again.' );
+            wp_die( esc_html__( '2FA session expired. Please log in again.', 'nexura-security' ), esc_html__( '2FA Session Expired', 'nexura-security' ), [
+                'response'  => 403,
+                'back_link' => true,
+            ] );
         }
         $user = get_userdata( $user_id );
+        if ( !$user ) {
+            // User was deleted after the 2FA session was created.
+            delete_transient( 'NEXURA_2fa_token_' . $token );
+            wp_die( esc_html__( 'Your user account could not be found. Please contact the site administrator.', 'nexura-security' ), esc_html__( '2FA Error', 'nexura-security' ), [
+                'response' => 403,
+            ] );
+        }
         $error = '';
         if ( isset( $_POST['NEXURA_2fa_code'] ) ) {
             if ( !isset( $_POST['_wpnonce'] ) || !wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'NEXURA_verify_2fa' ) ) {
-                wp_die( 'Security check failed.' );
+                wp_die( esc_html__( 'Security check failed.', 'nexura-security' ), esc_html__( 'Security Error', 'nexura-security' ), [
+                    'response' => 403,
+                ] );
             }
             $raw_code = sanitize_text_field( wp_unslash( $_POST['NEXURA_2fa_code'] ) );
             $code = preg_replace( '/[^0-9a-zA-Z]/', '', $raw_code );
@@ -207,11 +221,12 @@ class Two_Factor_Auth {
                 // Handle Remember Device (Pro feature)
                 if ( function_exists( 'nsp_fs' ) ) {
                 }
-                // Log user in
+                // Log user in — do NOT re-fire 'wp_login' here, as intercept_login() hooks into it
+                // and would create a redirect loop. wp_set_auth_cookie() is sufficient.
                 wp_set_current_user( $user->ID, $user->user_login );
                 wp_set_auth_cookie( $user->ID, true );
-                do_action( 'wp_login', $user->user_login, $user );
-                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+                do_action( 'nexura_2fa_login_success', $user );
+                // Custom hook for extensibility
                 // SECURITY FIX: Validate redirect URL is same-site to prevent Open Redirect attacks
                 $raw_redirect = ( isset( $_REQUEST['redirect_to'] ) ? sanitize_text_field( wp_unslash( $_REQUEST['redirect_to'] ) ) : admin_url() );
                 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -224,14 +239,21 @@ class Two_Factor_Auth {
                 if ( $attempts >= 3 ) {
                     delete_transient( 'NEXURA_2fa_token_' . $token );
                     delete_transient( 'NEXURA_2fa_attempts_' . $token );
-                    wp_die( 'Too many failed 2FA attempts. Session locked. Please log in again.' );
+                    wp_die( esc_html__( 'Too many failed 2FA attempts. Your session has been locked. Please log in again.', 'nexura-security' ), esc_html__( '2FA Locked', 'nexura-security' ), [
+                        'response'  => 403,
+                        'back_link' => true,
+                    ] );
                 }
                 set_transient( 'NEXURA_2fa_attempts_' . $token, $attempts, 300 );
-                $error = 'Invalid code. You have ' . (3 - $attempts) . ' attempts left.';
+                $error = sprintf( 
+                    /* translators: %d: number of remaining login attempts */
+                    __( 'Invalid code. You have %d attempt(s) left.', 'nexura-security' ),
+                    3 - $attempts
+                 );
             }
         }
         // Output the 2FA form
-        login_header( 'Two-Factor Authentication', '', new \WP_Error('2fa_failed', $error) );
+        login_header( __( 'Two-Factor Authentication', 'nexura-security' ), '', new \WP_Error('2fa_failed', $error) );
         ?>
         <form name="NEXURA_2fa_form" id="NEXURA_2fa_form" action="" method="post">
             <?php 
@@ -280,7 +302,9 @@ class Two_Factor_Auth {
         // We only enforce this if XML-RPC is processed.
         $disable_xmlrpc = get_option( 'NEXURA_disable_xmlrpc', '0' );
         if ( $disable_xmlrpc === '1' ) {
-            wp_die( 'XML-RPC is disabled.', 'XML-RPC Disabled', 403 );
+            wp_die( esc_html__( 'XML-RPC is disabled.', 'nexura-security' ), esc_html__( 'XML-RPC Disabled', 'nexura-security' ), [
+                'response' => 403,
+            ] );
         }
         $require_xmlrpc_2fa = get_option( 'NEXURA_require_xmlrpc_2fa', '0' );
         if ( $require_xmlrpc_2fa === '1' ) {
@@ -290,7 +314,9 @@ class Two_Factor_Auth {
             if ( $user && $user->exists() ) {
                 $is_enabled = get_user_meta( $user->ID, 'NEXURA_2fa_enabled', true );
                 if ( $is_enabled === '1' && !did_action( 'application_password_did_authenticate' ) ) {
-                    wp_die( 'Two-Factor Authentication is enabled for your account. You must use an Application Password for XML-RPC requests.', '2FA Required', 403 );
+                    wp_die( esc_html__( 'Two-Factor Authentication is enabled for your account. You must use an Application Password for XML-RPC requests.', 'nexura-security' ), esc_html__( '2FA Required', 'nexura-security' ), [
+                        'response' => 403,
+                    ] );
                 }
             }
         }

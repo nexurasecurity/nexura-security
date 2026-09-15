@@ -127,10 +127,7 @@ class Loader {
             if ( class_exists( 'Nexura_Security\\File_Integrity' ) ) {
                 $file_integrity = new File_Integrity();
             }
-            if ( class_exists( 'Nexura_Security\\DB_Backup' ) ) {
-                $db_backup = new DB_Backup();
-                $db_backup->init();
-            }
+            // DB_Backup is registered below (outside admin block) so REST routes always fire
             if ( file_exists( NEXURA_PLUGIN_DIR . 'includes/class-safe-cleanup.php' ) ) {
                 require_once NEXURA_PLUGIN_DIR . 'includes/class-safe-cleanup.php';
             }
@@ -153,6 +150,11 @@ class Loader {
         // REST API
         if ( class_exists( 'Nexura_Security\\Rest_Controller' ) ) {
             add_action( 'rest_api_init', [new Rest_Controller(), 'register_routes'] );
+        }
+        // DB Backup — must be outside is_admin() block so REST routes register on all REST requests
+        if ( class_exists( 'Nexura_Security\\DB_Backup' ) ) {
+            $db_backup = new DB_Backup();
+            $db_backup->init();
         }
     }
 

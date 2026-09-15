@@ -522,6 +522,9 @@ class Scanner {
         // signature that Nexura Hardening actually generates. A hacker cannot just rename
         // their malware to 'nexura-waf-bootstrap.php' to bypass Rogue Root detection.
         if ( strtolower( $filename ) === 'nexura-waf-bootstrap.php' ) {
+            if ( ! function_exists( 'get_home_path' ) ) {
+                require_once ABSPATH . 'wp-admin/includes/file.php';
+            }
             $full_path = get_home_path() . 'nexura-waf-bootstrap.php';
             return $this->is_genuine_waf_bootstrap( $full_path );
         }
@@ -656,7 +659,11 @@ class Scanner {
                     // Set content type to HTML
                     $headers = array('Content-Type: text/html; charset=UTF-8');
                     
-                    wp_mail( $admin_email, $subject, $message, $headers );
+                    try {
+                        wp_mail( $admin_email, $subject, $message, $headers );
+                    } catch ( \Throwable $e ) {
+                        // Silently catch mailer exceptions to prevent halting the scan process
+                    }
                     update_option( 'NEXURA_last_virus_alert_email', time(), false );
                 }
             }
@@ -1539,6 +1546,24 @@ class Scanner {
                 'description' => 'document.write() injecting a raw <script> tag. Legacy dropper technique.',
                 'risk' => 'Medium',
                 'confidence' => 75,
+            ],
+            'js_obfuscator_io' => [
+                'pattern' => '/\bvar\s+_0x[a-f0-9]+\s*=\s*\[(?:[\'"][^\'"]*[\'"]\s*,?\s*)+\]/i',
+                'description' => 'Obfuscator.io hex string array pattern commonly used by Balada Injector and Sign1.',
+                'risk' => 'High',
+                'confidence' => 90,
+            ],
+            'js_dynamic_script_inject' => [
+                'pattern' => '/document\.createElement\s*\(\s*[\'"]script[\'"]\s*\).*?\.src\s*=\s*(?:atob|\[_0x)/s',
+                'description' => 'Dynamic script tag injection using base64 or obfuscated payload (ClearFake/Sign1).',
+                'risk' => 'Critical',
+                'confidence' => 95,
+            ],
+            'js_string_shifter_logic' => [
+                'pattern' => '/function\s*\(\s*_0x[a-f0-9]+\s*,\s*_0x[a-f0-9]+\s*\)\s*\{.*?while\s*\(\s*!!\[\]\s*\)\s*\{.*?shift\s*\(\s*\).*?push\s*\(\s*\)/s',
+                'description' => 'Obfuscated string array shifter function core to modern JS malware packers.',
+                'risk' => 'High',
+                'confidence' => 88,
             ],
         ];
 

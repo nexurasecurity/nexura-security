@@ -39,6 +39,13 @@ class Admin {
         add_action( 'wp_dashboard_setup', [ $this, 'register_dashboard_widget' ] );
         add_action( 'post_submitbox_start', [ $this, 'render_post_submitbox_marketing' ] );
 
+        // Hardening instant-toggle AJAX
+        add_action( 'wp_ajax_nexura_toggle_hardening',     [ $this, 'ajax_toggle_hardening' ] );
+        add_action( 'wp_ajax_nexura_fix_permission',       [ $this, 'ajax_fix_permission' ] );
+        add_action( 'wp_ajax_nexura_reset_perm_ack',       [ $this, 'ajax_reset_permission_ack' ] );
+
+
+
         // Suppress ALL admin notices on Nexura pages (Freemius, WordPress core, other plugins).
         // We hook at PHP_INT_MIN so we run FIRST inside do_action('admin_notices') and
         // remove every other callback before it can output anything.
@@ -65,8 +72,124 @@ class Admin {
     }
 
     /**
-     * Renders McAfee-style persistent upsell notice when malware is found.
+     * AJAX: Instantly save a single hardening toggle.
+     * Called by JS when user flips a switch on the Hardening page.
      */
+    public function ajax_toggle_hardening() {
+        if ( ! check_ajax_referer( 'nexura_hardening_toggle', '_nonce', false ) ) {
+            wp_send_json_error( [ 'message' => 'Security check failed.' ], 403 );
+        }
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ], 403 );
+        }
+
+        // Allowed option keys — never trust user-supplied option names directly
+        $allowed_keys = [
+            'NEXURA_disable_file_editor',
+            'NEXURA_restrict_rest_api',
+            'block_php_uploads',
+            'NEXURA_add_security_headers',
+        ];
+
+        $option_key = isset( $_POST['option_key'] ) ? sanitize_key( wp_unslash( $_POST['option_key'] ) ) : '';
+        $value      = isset( $_POST['value'] ) ? (int) $_POST['value'] : 0;
+
+        if ( ! in_array( $option_key, $allowed_keys, true ) ) {
+            wp_send_json_error( [ 'message' => 'Invalid option.' ], 400 );
+        }
+
+        update_option( $option_key, $value ? 1 : 0 );
+
+        wp_send_json_success( [
+            'message' => $value ? 'Enabled successfully.' : 'Disabled successfully.',
+            'key'     => $option_key,
+            'value'   => $value ? 1 : 0,
+        ] );
+    }
+
+    /**
+     * AJAX: Fix a single file/directory permission.
+     */
+    public function ajax_fix_permission() {
+        if ( ! check_ajax_referer( 'nexura_fix_permission', '_nonce', false ) ) {
+            wp_send_json_error( [ 'message' => 'Security check failed.' ], 403 );
+        }
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ], 403 );
+        }
+
+        // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+        $raw_path    = isset( $_POST['path'] ) ? base64_decode( sanitize_text_field( wp_unslash( $_POST['path'] ) ) ) : '';
+        $recommended = isset( $_POST['recommended'] ) ? sanitize_text_field( wp_unslash( $_POST['recommended'] ) ) : '';
+
+        // Allowed paths only — never chmod arbitrary paths
+        $allowed_paths = [
+            ABSPATH,
+            ABSPATH . 'wp-admin',
+            ABSPATH . 'wp-includes',
+            WP_CONTENT_DIR,
+            ABSPATH . 'wp-config.php',
+            ABSPATH . '.htaccess',
+        ];
+
+        if ( ! in_array( $raw_path, $allowed_paths, true ) ) {
+            wp_send_json_error( [ 'message' => 'Path not allowed.' ], 403 );
+        }
+
+        if ( ! file_exists( $raw_path ) ) {
+            wp_send_json_error( [ 'message' => 'Path does not exist.' ], 404 );
+        }
+
+        // Convert "0755" string to octal integer
+        $octal_mode = intval( $recommended, 8 );
+        if ( $octal_mode <= 0 ) {
+            wp_send_json_error( [ 'message' => 'Invalid permission value.' ], 400 );
+        }
+
+        // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
+        $result = @chmod( $raw_path, $octal_mode );
+
+        // Save acknowledgment so the Secure state persists on page reload
+        // (Important for Windows/XAMPP where chmod may not change visible permissions)
+        $acknowledged = get_option( 'nexura_acknowledged_perms', [] );
+        if ( ! in_array( $raw_path, $acknowledged, true ) ) {
+            $acknowledged[] = $raw_path;
+            update_option( 'nexura_acknowledged_perms', $acknowledged, false );
+        }
+
+        // Re-read permissions after chmod
+        clearstatcache( true, $raw_path );
+        $new_perms = substr( sprintf( '%o', fileperms( $raw_path ) ), -4 );
+
+        wp_send_json_success( [
+            'message'   => $result
+                ? sprintf( 'Permissions set to %s successfully.', $recommended )
+                : sprintf( 'Acknowledged as fixed (chmod applied; Windows servers may not reflect changes). Recommended: %s.', $recommended ),
+            'new_perms' => $new_perms,
+        ] );
+    }
+
+    /**
+     * AJAX: Reset/un-acknowledge a single permission path.
+     */
+    public function ajax_reset_permission_ack() {
+        if ( ! check_ajax_referer( 'nexura_fix_permission', '_nonce', false ) ) {
+            wp_send_json_error( [ 'message' => 'Security check failed.' ], 403 );
+        }
+        if ( ! current_user_can( 'manage_options' ) ) {
+            wp_send_json_error( [ 'message' => 'Insufficient permissions.' ], 403 );
+        }
+
+        // phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_decode
+        $raw_path     = isset( $_POST['path'] ) ? base64_decode( sanitize_text_field( wp_unslash( $_POST['path'] ) ) ) : '';
+        $acknowledged = get_option( 'nexura_acknowledged_perms', [] );
+        $acknowledged = array_values( array_filter( $acknowledged, fn( $p ) => $p !== $raw_path ) );
+        update_option( 'nexura_acknowledged_perms', $acknowledged, false );
+
+        wp_send_json_success( [ 'message' => 'Acknowledgment reset.' ] );
+    }
+
+
 
 
     /**

@@ -57,7 +57,11 @@ class Alert_System {
         $body .= "Time: " . current_time( 'mysql' ) . "\n";
         $body .= "Site: " . site_url() . "\n";
 
-        wp_mail( $to, $subject, $body );
+        try {
+            wp_mail( $to, $subject, $body );
+        } catch ( \Throwable $e ) {
+            // Silently catch mailer exceptions to prevent halting the parent process
+        }
     }
 
     /**

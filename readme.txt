@@ -3,7 +3,7 @@ Contributors: nexurasecurity, freemius
 Tags: security, malware scanner, firewall, two factor authentication, brute force protection
 Requires at least: 5.8
 Tested up to: 7.0.1
-Stable tag: 1.0.18
+Stable tag: 1.0.19
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -230,6 +230,18 @@ We are committed to respecting user privacy and designing our features with data
 = Is Nexura Security really free? =
 Yes, 100% free. All core security features — malware scanning, file integrity monitoring, 2FA, brute-force protection, WAF, hardening, and more — are completely free with no usage limits. The Pro version adds advanced automation and enterprise features for sites that need maximum protection.
 
+= How to Fix "Site Ahead Contains Harmful Programs" or "Deceptive Site Ahead"? =
+If you see the red Google Chrome warning "The site ahead contains harmful programs", "Deceptive site ahead", or "The site ahead contains malware", your website has been compromised with malware or phishing scripts and blacklisted by Google Safe Browsing. 
+
+To fix this issue (mengatasi "The site ahead contains harmful programs"):
+1. **Scan your site:** Run a Nexura Security deep malware scan to find hidden backdoors, malicious redirects, and infected files.
+2. **Clean the malware:** Remove all detected threats using our one-click cleanup tool.
+3. **Request a Review:** Go to Google Search Console, navigate to "Security Issues", and submit a review request. The warning is usually lifted within 24-72 hours.
+Nexura's built-in Google Safe Browsing Check lets you monitor your blacklist status directly from your WordPress dashboard.
+
+= How to Fix "This site may be hacked" Message in Google Search? =
+If you see "This site may be hacked" next to your domain in Google Search results, Google has detected SEO spam (like the Japanese keyword hack or Pharma hack) on your site. Nexura Security's deep scanner can find and remove these hidden spam injections so you can request a review and restore your SEO rankings.
+
 = Can it clean a hacked WordPress site? =
 Yes. The built-in malware scanner detects backdoors, obfuscated code, web shells, and known malware patterns. You can remove detected threats with a single click. For fully automated, zero-touch cleanup, upgrade to Nexura Security Pro.
 
@@ -277,6 +289,15 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 ---
 
 == Changelog ==
+
+= 1.0.19 =
+* **Bug Fix:** Fixed a UI glitch in the loading button icon by switching from Dashicons to the plugin's native spinner.
+* **Bug Fix:** Resolved a false-positive issue in the Plugin Conflict Cleaner where WooCommerce's Jetpack dependencies caused continuous false alerts.
+* **Bug Fix:** Fixed a bug in the File Snapshots viewer where the PRO verification logic incorrectly hid snapshots for users with an active lifetime license.
+* **Enhancement:** Added a "Clean All Logs" button to the IP Intelligence page, complete with a custom modal, to allow users to easily clear local or staging brute force logs.
+* **Security:** Added 2026 modern JS malware signatures to detect obfuscated arrays (Balada Injector, Sign1) and dynamic script injections (ClearFake).
+* **Security:** Expanded PHP backdoor signatures to block modern WP action hook droppers, variable function evasions, and known webshells (WSO, B374k).
+* **Bug Fix:** Resolved a critical bug where malware scans would crash at 96% with a 500 error if the server's `mail()` function was disabled or misconfigured.
 
 = 1.0.18 =
 * **Security Hardening:** Upgraded security-sensitive MD5 hashes to SHA-256 (CAPTCHA cookies and core file restorer) to prevent cryptographic collisions.

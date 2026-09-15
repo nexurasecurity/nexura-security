@@ -163,12 +163,12 @@ class Cron {
         $cutoff_date = gmdate( 'Y-m-d H:i:s', strtotime( "-{$retention_days} days" ) );
 
         $tables_created_at = [
-            $wpdb->prefix . 'NEXURA_attack_logs',
-            $wpdb->prefix . 'NEXURA_audit_logs',
             $wpdb->prefix . 'NEXURA_visitor_logs',
         ];
 
         $tables_timestamp = [
+            $wpdb->prefix . 'NEXURA_attack_logs',
+            $wpdb->prefix . 'NEXURA_audit_logs',
             $wpdb->prefix . 'NEXURA_recaptcha_logs',
         ];
 

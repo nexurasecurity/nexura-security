@@ -188,4 +188,36 @@ return [
         'confidence'  => 92,
     ],
 
+    // -------------------------------------------------------------------------
+    // CRITICAL - Modern WordPress Backdoors & Webshells (2026 Trends)
+    // -------------------------------------------------------------------------
+
+    'wp_action_loader_backdoor' => [
+        'pattern'     => '/(?:add_action|add_filter)\s*\(\s*[\'"](?:init|wp_loaded|wp_head|admin_init)[\'"]\s*,\s*(?:create_function|[\'"]base64_decode[\'"]|[\'"]assert[\'"]|[\'"]eval[\'"])/i',
+        'description' => 'Malicious WordPress hook loader (executes payload on core WP actions).',
+        'risk'        => 'Critical',
+        'confidence'  => 98,
+    ],
+
+    'variable_function_execution' => [
+        'pattern'     => '/\$[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*\s*\(\s*(?:base64_decode|gzinflate|str_rot13)/i',
+        'description' => 'Variable function execution (e.g. $a = "eval"; $a(...)) — high evasion tactic.',
+        'risk'        => 'Critical',
+        'confidence'  => 90,
+    ],
+
+    'object_injection_unserialize' => [
+        'pattern'     => '/unserialize\s*\(\s*(?:base64_decode\s*\(\s*)?\$_(POST|GET|REQUEST|COOKIE)\s*\[/i',
+        'description' => 'PHP Object Injection backdoor using unserialize() on user input.',
+        'risk'        => 'Critical',
+        'confidence'  => 97,
+    ],
+
+    'known_webshell_fingerprints' => [
+        'pattern'     => '/(?:WSOsetcookie|FilesMan|b374k|IndoXploit|Alfa\s+Team)/i',
+        'description' => 'Fingerprint match for known advanced webshells (WSO, B374k, Alfa Team, IndoXploit).',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
 ];

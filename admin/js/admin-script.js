@@ -77,7 +77,113 @@ jQuery(document).ready(function($) {
                 this.loadResults();
             }
 
+            // Hardening instant-toggle
+            $('.nexura-hardening-toggle').on('change', function() {
+                var $input = $(this);
+                var optionKey = $input.data('option');
+                var value = $input.is(':checked') ? 1 : 0;
+                var nonce = $('#nexura-hardening-nonce').val();
+                
+                $input.prop('disabled', true);
+                
+                $.ajax({
+                    url: typeof NEXURA_ajax !== 'undefined' ? NEXURA_ajax.ajax_url : ajaxurl,
+                    method: 'POST',
+                    data: {
+                        action: 'nexura_toggle_hardening',
+                        _nonce: nonce,
+                        option_key: optionKey,
+                        value: value
+                    },
+                    success: function(response) {
+                        $input.prop('disabled', false);
+                        var $toast = $('#nexura-hardening-toast');
+                        if (response.success) {
+                            $toast.html('<svg width="20" height="20" fill="none" stroke="#10b981" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> ' + response.data.message);
+                        } else {
+                            $toast.html('<svg width="20" height="20" fill="none" stroke="#ef4444" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> ' + (response.data ? response.data.message : 'Error saving setting.'));
+                            $input.prop('checked', !value); // Revert switch visually
+                        }
+                        $toast.fadeIn(200);
+                        setTimeout(function() { $toast.fadeOut(300); }, 3000);
+                    },
+                    error: function() {
+                        $input.prop('disabled', false);
+                        $input.prop('checked', !value); // Revert switch visually
+                        var $toast = $('#nexura-hardening-toast');
+                        $toast.html('<svg width="20" height="20" fill="none" stroke="#ef4444" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg> Connection error.');
+                        $toast.fadeIn(200);
+                        setTimeout(function() { $toast.fadeOut(300); }, 3000);
+                    }
+                });
+            });
+
+            // File Permissions Fix button
+            $(document).on('click', '.nexura-fix-perm-btn', function() {
+                var $btn        = $(this);
+                var pathB64     = $btn.data('path');
+                var recommended = $btn.data('recommended');
+                var rowId       = $btn.data('row');
+                var nonce       = $('#nexura-perm-nonce').val();
+
+                $btn.prop('disabled', true).text('Fixing...');
+
+                $.ajax({
+                    url: typeof NEXURA_ajax !== 'undefined' ? NEXURA_ajax.ajax_url : ajaxurl,
+                    method: 'POST',
+                    data: { action: 'nexura_fix_permission', _nonce: nonce, path: pathB64, recommended: recommended },
+                    success: function(res) {
+                        if (res.success) {
+                            $('#' + rowId).find('.nperm-current code').text(res.data.new_perms || recommended);
+                            $('#' + rowId).find('.nperm-status').html(
+                                '<span style="color:#10b981;font-weight:bold;display:inline-flex;align-items:center;gap:4px;">' +
+                                '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg> Secure</span>'
+                            );
+                            $('#' + rowId).find('.nperm-action').html('<span style="color:#10b981;font-size:13px;font-weight:600;">&#10003; Fixed</span>');
+                            var $toast = $('#nexura-hardening-toast');
+                            $toast.html('<svg width="20" height="20" fill="none" stroke="#10b981" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> ' + res.data.message);
+                            $toast.css('display','flex').hide().fadeIn(200);
+                            setTimeout(function() { $toast.fadeOut(300); }, 3500);
+                        } else {
+                            $btn.prop('disabled', false).text('Fix');
+                            alert(res.data ? res.data.message : 'Could not fix permissions.');
+                        }
+                    },
+                    error: function() {
+                        $btn.prop('disabled', false).text('Fix');
+                        alert('Connection error while fixing permissions.');
+                    }
+                });
+            });
+
+            // File Permissions Reset (un-acknowledge) button
+            $(document).on('click', '.nexura-reset-perm-btn', function() {
+                var $btn    = $(this);
+                var pathB64 = $btn.data('path');
+                var rowId   = $btn.data('row');
+                var nonce   = $('#nexura-perm-nonce').val();
+
+                $btn.prop('disabled', true).text('Resetting...');
+
+                $.ajax({
+                    url: typeof NEXURA_ajax !== 'undefined' ? NEXURA_ajax.ajax_url : ajaxurl,
+                    method: 'POST',
+                    data: { action: 'nexura_reset_perm_ack', _nonce: nonce, path: pathB64 },
+                    success: function(res) {
+                        if (res.success) {
+                            // Reload to show real state
+                            location.reload();
+                        } else {
+                            $btn.prop('disabled', false).text('Reset');
+                        }
+                    },
+                    error: function() { $btn.prop('disabled', false).text('Reset'); }
+                });
+            });
+
             // Auto-resume if scan was running before page reload
+
+
             if (typeof NEXURA_ajax !== 'undefined' && NEXURA_ajax.scan_running) {
                 var $btn = $('#nexura-run-scan');
                 var $stopBtn = $('#nexura-stop-scan');
@@ -374,7 +480,6 @@ jQuery(document).ready(function($) {
             $(document).trigger('nexura_issues_table_headers', [headers]);
 
             if (typeof NEXURA_PRO_ajax === 'undefined') {
-                headers.unshift('<th>File Path</th>');
                 headers.push('<th>Action</th>');
             }
             
@@ -426,9 +531,8 @@ jQuery(document).ready(function($) {
                 // Trigger hook so PRO can add File Path, Line, Action columns
                 $(document).trigger('nexura_issues_table_row', [rowData, item]);
                 
-                // If PRO is not active, add the File Path and Whitelist Action manually for the Free version
+                // If PRO is not active, add only Whitelist Action (no File Path for free users)
                 if (typeof NEXURA_PRO_ajax === 'undefined') {
-                    rowData.unshift('<td>' + filePathDisplay + '</td>');
                     rowData.push('<td><button type="button" class="button button-small nexura-whitelist-file" data-file="' + item.file_path + '" style="color: #008a20; border-color: #008a20;">Whitelist</button></td>');
                 }
 
@@ -583,36 +687,99 @@ jQuery(document).ready(function($) {
             e.preventDefault();
             var $btn = $(e.currentTarget);
             var originalHtml = $btn.html();
-            
+            var self = this;
+
+            // Build progress modal HTML
+            var modalHtml = '<div id="nexura-backup-modal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:99999;display:flex;align-items:center;justify-content:center;">' +
+                '<div style="background:var(--nexura-card-bg,#1a1f2e);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:30px;width:460px;max-width:90%;">' +
+                    '<h3 style="margin:0 0 8px;color:#fff;font-size:16px;">&#128230; Database Backup in Progress</h3>' +
+                    '<p id="nexura-backup-status" style="color:#94a3b8;font-size:13px;margin:0 0 18px;">Initializing...</p>' +
+                    '<div style="background:rgba(255,255,255,0.06);border-radius:8px;height:10px;overflow:hidden;margin-bottom:10px;">' +
+                        '<div id="nexura-backup-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#3b82f6,#8b5cf6);border-radius:8px;transition:width 0.4s ease;"></div>' +
+                    '</div>' +
+                    '<div style="display:flex;justify-content:space-between;color:#64748b;font-size:12px;">' +
+                        '<span id="nexura-backup-rows">0 rows written</span>' +
+                        '<span id="nexura-backup-pct">0%</span>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+            $('body').append(modalHtml);
             $btn.css('pointer-events', 'none').css('opacity', '0.7');
             $btn.find('span').last().text('Backing up...');
-            
-            $.ajax({
-                url: typeof NEXURA_ajax !== 'undefined' ? NEXURA_ajax.ajax_url : ajaxurl,
-                method: 'POST',
-                data: {
-                    action: 'NEXURA_backup_db',
-                    _wpnonce: typeof NEXURA_ajax !== 'undefined' ? NEXURA_ajax.backup_nonce : ''
-                },
-                success: (response) => {
-                    $btn.css('pointer-events', 'auto').css('opacity', '1');
-                    $btn.html(originalHtml);
-                    
-                    if (response.success && response.data && response.data.file) {
-                        alert('Database backup created successfully! Downloading now...');
-                        var downloadUrl = (typeof NEXURA_ajax !== 'undefined' ? NEXURA_ajax.ajax_url : ajaxurl) + '?action=NEXURA_download_backup&file=' + encodeURIComponent(response.data.file) + '&_wpnonce=' + encodeURIComponent(NEXURA_ajax.backup_nonce);
-                        window.location.href = downloadUrl;
-                    } else {
-                        alert('Failed to create backup: ' + (response.data || 'Unknown error'));
+
+            var nonce = typeof NEXURA_ajax !== 'undefined' ? NEXURA_ajax.nonce : '';
+            var restBase = typeof NEXURA_ajax !== 'undefined' ? NEXURA_ajax.rest_url : '';
+
+            function updateUI(pct, status, rows) {
+                $('#nexura-backup-bar').css('width', pct + '%');
+                $('#nexura-backup-pct').text(pct + '%');
+                $('#nexura-backup-status').text(status);
+                if (rows !== undefined) {
+                    $('#nexura-backup-rows').text(rows.toLocaleString() + ' rows written');
+                }
+            }
+
+            function closeModal() {
+                $('#nexura-backup-modal').remove();
+                $btn.css('pointer-events', 'auto').css('opacity', '1').html(originalHtml);
+            }
+
+            function doStep(sessionId) {
+                $.ajax({
+                    url: restBase + 'nexura/v1/backup/step',
+                    method: 'POST',
+                    data: JSON.stringify({ session_id: sessionId }),
+                    contentType: 'application/json',
+                    beforeSend: function(xhr) { xhr.setRequestHeader('X-WP-Nonce', nonce); },
+                    success: function(res) {
+                        if (!res.success) {
+                            closeModal();
+                            alert('Backup error: ' + (res.message || 'Unknown error'));
+                            return;
+                        }
+                        if (res.done) {
+                            updateUI(100, 'Complete! Downloading...', res.rows_done);
+                            setTimeout(function() {
+                                closeModal();
+                                window.location.href = restBase + 'nexura/v1/backup/download?file=' + encodeURIComponent(res.file) + '&_wpnonce=' + encodeURIComponent(nonce);
+                            }, 800);
+                        } else {
+                            var tableLabel = res.current_table ? res.current_table.replace(/^wp_/, 'wp_') : '';
+                            updateUI(res.progress, 'Backing up: ' + tableLabel + ' (' + res.table_index + '/' + res.total_tables + ' tables)', res.rows_done);
+                            setTimeout(function() { doStep(sessionId); }, 50);
+                        }
+                    },
+                    error: function(xhr) {
+                        closeModal();
+                        alert('Backup step failed: ' + xhr.statusText);
                     }
+                });
+            }
+
+            // Init
+            $.ajax({
+                url: restBase + 'nexura/v1/backup/init',
+                method: 'POST',
+                data: JSON.stringify({}),
+                contentType: 'application/json',
+                beforeSend: function(xhr) { xhr.setRequestHeader('X-WP-Nonce', nonce); },
+                success: function(res) {
+                    if (!res.success) {
+                        closeModal();
+                        alert('Failed to start backup: ' + (res.message || 'Unknown error'));
+                        return;
+                    }
+                    updateUI(1, 'Starting... ' + res.total_tables + ' tables, ' + res.total_rows.toLocaleString() + ' total rows');
+                    doStep(res.session_id);
                 },
-                error: (xhr) => {
-                    $btn.css('pointer-events', 'auto').css('opacity', '1');
-                    $btn.html(originalHtml);
-                    alert('Error creating backup: ' + xhr.statusText);
+                error: function(xhr) {
+                    closeModal();
+                    alert('Failed to initialize backup: ' + xhr.statusText);
                 }
             });
         },
+
 
         showError: function(msg) {
             $('#nexura-run-scan').prop('disabled', false).text('Run Full Scan Again').show();
@@ -2075,6 +2242,74 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    /**
+     * Cron Audit Cleanup Modal Logic
+     */
+    var cronModal = $('#nexura-cron-modal');
+    if (cronModal.length) {
+        var cronBtn = $('#nexura-trigger-cron-clean');
+        var cronCancelBtn = $('#nexura-cron-modal-cancel');
+        var cronConfirmBtn = $('#nexura-cron-modal-confirm');
+        var cronRealForm = $('#nexura-cron-clean-form');
+
+        cronBtn.on('click', function(e) {
+            e.preventDefault();
+            cronModal.show();
+        });
+
+        cronCancelBtn.on('click', function() {
+            cronModal.hide();
+        });
+
+        cronConfirmBtn.on('click', function() {
+            var loadingText = $(this).attr('data-loading-text') || 'Cleaning...';
+            $(this).html('<div class="nexura-spinner" style="display:inline-block; vertical-align:middle; margin-right:6px; width:14px; height:14px; border-width:2px;"></div> <span style="vertical-align:middle;">' + loadingText + '</span>');
+            $(this).css('opacity', '0.7');
+            $(this).prop('disabled', true);
+            cronRealForm.submit();
+        });
+
+        $(window).on('click', function(event) {
+            if ($(event.target).is(cronModal)) {
+                cronModal.hide();
+            }
+        });
+    }
+
+    /**
+     * IP Logs Cleanup Modal Logic
+     */
+    var ipModal = $('#nexura-ip-modal');
+    if (ipModal.length) {
+        var ipBtn = $('#nexura-trigger-ip-clean');
+        var ipCancelBtn = $('#nexura-ip-modal-cancel');
+        var ipConfirmBtn = $('#nexura-ip-modal-confirm');
+        var ipRealForm = $('#nexura-ip-clean-form');
+
+        ipBtn.on('click', function(e) {
+            e.preventDefault();
+            ipModal.show();
+        });
+
+        ipCancelBtn.on('click', function() {
+            ipModal.hide();
+        });
+
+        ipConfirmBtn.on('click', function() {
+            var loadingText = $(this).attr('data-loading-text') || 'Cleaning...';
+            $(this).html('<div class="nexura-spinner" style="display:inline-block; vertical-align:middle; margin-right:6px; width:14px; height:14px; border-width:2px;"></div> <span style="vertical-align:middle;">' + loadingText + '</span>');
+            $(this).css('opacity', '0.7');
+            $(this).prop('disabled', true);
+            ipRealForm.submit();
+        });
+
+        $(window).on('click', function(event) {
+            if ($(event.target).is(ipModal)) {
+                ipModal.hide();
+            }
+        });
+    }
 
 });
 

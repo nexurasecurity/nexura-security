@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.19] - 2026-09-15
+
+### Security Hardening, Enhancements & Bug Fixes
+- **Security:** Added 2026 modern JS malware signatures to detect obfuscated arrays (Balada Injector, Sign1) and dynamic script injections (ClearFake).
+- **Security:** Expanded PHP backdoor signatures to block modern WP action hook droppers, variable function evasions, and known webshells (WSO, B374k).
+- **Enhancement:** Added a "Clean All Logs" button to the IP Intelligence page, complete with a custom modal, to allow users to easily clear local or staging brute force logs.
+- **Bug Fix:** Fixed a UI glitch in the loading button icon by switching from Dashicons to the plugin's native spinner.
+- **Bug Fix:** Resolved a false-positive issue in the Plugin Conflict Cleaner where WooCommerce's Jetpack dependencies caused continuous false alerts.
+- **Bug Fix:** Fixed a bug in the File Snapshots viewer where the PRO verification logic incorrectly hid snapshots for users with an active lifetime license.
+- **Bug Fix:** Resolved a critical bug where malware scans would crash at 96% with a 500 error if the server's `mail()` function was disabled or misconfigured.
+
+---
+
 ## [1.0.18] - 2026-09-10
 
 ### Security Hardening, Fixes & Enhancements

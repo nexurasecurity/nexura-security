@@ -161,7 +161,11 @@ class Audit_Logger {
             current_time( 'mysql' )
         );
 
-        wp_mail( $admin_email, $subject, $message );
+        try {
+            wp_mail( $admin_email, $subject, $message );
+        } catch ( \Throwable $e ) {
+            // Silently catch mailer exceptions
+        }
     }
 
     /**

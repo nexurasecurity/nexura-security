@@ -379,10 +379,6 @@ class Admin {
         register_setting( 'NEXURA_settings_group', 'NEXURA_hide_third_party_notices', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_magic_link', $sanitize_args );
         
-        // Brute-force settings
-        register_setting( 'NEXURA_settings_group', 'NEXURA_brute_force_max_attempts', [ 'sanitize_callback' => 'absint' ] );
-        register_setting( 'NEXURA_settings_group', 'NEXURA_brute_force_lockout', [ 'sanitize_callback' => 'absint' ] );
-        
         // Hardening settings
         register_setting( 'NEXURA_hardening_group', 'NEXURA_disable_file_editor', $sanitize_args );
         register_setting( 'NEXURA_hardening_group', 'block_php_uploads', $sanitize_args );
@@ -444,6 +440,7 @@ class Admin {
         register_setting( 'NEXURA_settings_group', 'NEXURA_email_alerts_critical', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_email_alerts_high', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_email_alerts_medium', $sanitize_args );
+        register_setting( 'NEXURA_settings_group', 'NEXURA_hourly_email_limit', [ 'sanitize_callback' => 'absint' ] );
         register_setting( 'NEXURA_settings_group', 'NEXURA_enable_webhook_alerts', $sanitize_args );
         register_setting( 'NEXURA_settings_group', 'NEXURA_webhook_url', [ 'sanitize_callback' => 'esc_url_raw' ] );
         
@@ -468,6 +465,8 @@ class Admin {
         register_setting( 'NEXURA_login_security_group', 'NEXURA_ntp_sync', $sanitize_args );
         register_setting( 'NEXURA_login_security_group', 'NEXURA_show_last_login', $sanitize_args );
         register_setting( 'NEXURA_login_security_group', 'NEXURA_delete_data_on_deactivation', $sanitize_args );
+        register_setting( 'NEXURA_login_security_group', 'NEXURA_brute_force_max_attempts', [ 'sanitize_callback' => 'absint' ] );
+        register_setting( 'NEXURA_login_security_group', 'NEXURA_brute_force_lockout', [ 'sanitize_callback' => 'absint' ] );
         
         // Manage Auto-Heal Drop-in on Option Update
         add_action( 'update_option_NEXURA_enable_auto_heal', [ $this, 'manage_auto_heal_dropin' ], 10, 3 );
@@ -648,6 +647,7 @@ class Admin {
             'dashboard'            => __( 'Dashboard', 'nexura-security' ),
             'malware-scan'         => __( 'Malware Scan', 'nexura-security' ),
             'issues-detected'      => __( 'Issues Detected', 'nexura-security' ),
+            'reinfection-guard'    => __( 'Reinfection Guard', 'nexura-security' ),
             'file-integrity'       => __( 'File Integrity', 'nexura-security' ),
             'hardening'            => __( 'Hardening', 'nexura-security' ),
             'security-headers'     => __( 'Security Headers', 'nexura-security' ),
@@ -683,7 +683,7 @@ class Admin {
         ];
 
         // Define which slugs should be visible in the native WordPress sidebar
-        $visible_slugs = [ 'dashboard', 'settings', 'about', 'help', 'whitelist' ];
+        $visible_slugs = [ 'dashboard', 'settings', 'about', 'help', 'whitelist', 'reinfection-guard' ];
 
         foreach ( $submenu_pages as $slug => $title ) {
             $parent = in_array( $slug, $visible_slugs, true ) ? 'nexura' : 'nexura-hidden';
@@ -722,6 +722,11 @@ class Admin {
                     'url'   => 'admin.php?page=nexura-issues-detected',
                     'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>',
                     'label' => __( 'Issues Detected', 'nexura-security' ),
+                ],
+                'reinfection-guard' => [
+                    'url'   => 'admin.php?page=nexura-reinfection-guard',
+                    'icon'  => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>',
+                    'label' => __( 'Reinfection Guard', 'nexura-security' ),
                 ],
                 'file-integrity' => [
                     'url'   => 'admin.php?page=nexura-file-integrity',
@@ -836,6 +841,50 @@ class Admin {
         wp_enqueue_style( 'nexura-pro-upgrade-modal', NEXURA_PLUGIN_URL . 'admin/css/pro-upgrade-modal.css', [ 'nexura-admin-style' ], NEXURA_VERSION );
         wp_enqueue_script( 'nexura-admin-script', NEXURA_PLUGIN_URL . 'admin/js/admin-script.js', [ 'jquery', 'nexura-chartjs', 'nexura-qrcode' ], time(), true );
         wp_enqueue_script( 'nexura-malware-scan-cpu', NEXURA_PLUGIN_URL . 'admin/js/malware-scan-cpu.js', [], NEXURA_VERSION, true );
+
+        // Reinfection Guard specific assets
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if ( isset( $_GET['page'] ) && $_GET['page'] === 'nexura-reinfection-guard' ) {
+            $rg_style_ver  = NEXURA_VERSION . '.' . filemtime( NEXURA_PLUGIN_DIR . 'admin/css/reinfection-guard.css' );
+            $rg_script_ver = NEXURA_VERSION . '.' . filemtime( NEXURA_PLUGIN_DIR . 'admin/js/reinfection-guard.js' );
+
+            wp_enqueue_style( 'nexura-reinfection-guard', NEXURA_PLUGIN_URL . 'admin/css/reinfection-guard.css', [ 'nexura-admin-style' ], $rg_style_ver );
+            // Load Cytoscape.js locally (WordPress.org guidelines: no external CDN)
+            wp_enqueue_script( 'cytoscape', NEXURA_PLUGIN_URL . 'admin/js/cytoscape.min.js', [], '3.26.0', true );
+            wp_enqueue_script( 'nexura-reinfection-guard-script', NEXURA_PLUGIN_URL . 'admin/js/reinfection-guard.js', [ 'jquery', 'cytoscape' ], $rg_script_ver, true );
+            // Use a dedicated object NEXURA_rg to avoid collision with NEXURA_ajax on nexura-admin-script
+            $last_report = get_option( 'NEXURA_reinfection_result', null );
+            $is_pro      = function_exists( 'nexura_is_pro' ) && nexura_is_pro();
+            $upgrade_url = function_exists( 'nsp_fs' ) ? nsp_fs()->get_upgrade_url() : admin_url( 'admin.php?page=nexura-pricing' );
+
+            if ( ! $is_pro && is_array( $last_report ) ) {
+                if ( ! empty( $last_report['evidence'] ) && is_array( $last_report['evidence'] ) ) {
+                    foreach ( $last_report['evidence'] as &$ev ) {
+                        unset( $ev['path'], $ev['evidence'], $ev['hook'], $ev['option'] );
+                    }
+                }
+                if ( ! empty( $last_report['graph_data']['nodes'] ) && is_array( $last_report['graph_data']['nodes'] ) ) {
+                    foreach ( $last_report['graph_data']['nodes'] as &$node ) {
+                        if ( isset( $node['group'] ) && $node['group'] !== 'malware' ) {
+                            $node['label'] = ( isset( $node['group'] ) ? $node['group'] : 'persistence' ) . ' [PRO]';
+                            $node['desc']  = 'Upgrade to Nexura Pro to view full file path and reverse-trace evidence.';
+                        }
+                    }
+                }
+                if ( ! empty( $last_report['target_file'] ) && $last_report['target_file'] !== 'Site-Wide Audit' ) {
+                    $last_report['target_file'] = 'Protected Path (PRO)';
+                }
+            }
+
+            wp_localize_script( 'nexura-reinfection-guard-script', 'NEXURA_rg', [
+                'rest_url'    => esc_url_raw( rest_url() ),
+                'nonce'       => wp_create_nonce( 'wp_rest' ),
+                'last_report' => is_array( $last_report ) ? $last_report : null,
+                'is_pro'      => (bool) $is_pro,
+                'upgrade_url' => esc_url( $upgrade_url ),
+            ] );
+        }
+
 
         // Collect dashboard data for charts
         global $wpdb;

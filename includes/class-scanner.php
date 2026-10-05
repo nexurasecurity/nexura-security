@@ -468,8 +468,10 @@ class Scanner {
                     $ext = strtolower( $file->getExtension() );
                     $filename = strtolower( $file->getFilename() );
                     
-                    // We target high-risk root files: .php, .js, .htaccess, extensionless files, and common hacker drop files like .txt and .html
-                    if ( in_array( $ext, [ 'php', 'js', 'inc', 'phtml', 'txt', 'html' ], true ) || $filename === '.htaccess' || empty( $ext ) ) {
+                    // We target high-risk root files: .php, .js, .htaccess, extensionless files,
+                    // common hacker drop files (.txt, .html, .htm), and server-side script types
+                    // (.py Python shells, .sh bash scripts, .pl Perl backdoors, .phar PHP archives, .cgi CGI scripts)
+                    if ( in_array( $ext, [ 'php', 'js', 'inc', 'phtml', 'txt', 'html', 'htm', 'py', 'sh', 'pl', 'phar', 'cgi' ], true ) || $filename === '.htaccess' || empty( $ext ) ) {
                         // Smart Scan Delta Check
                         if ( $smart_scan_time > 0 && $file->getMTime() <= $smart_scan_time ) {
                             continue; // Skip unmodified root files
@@ -668,10 +670,10 @@ class Scanner {
                 }
             }
 
-            // Also dispatch via the Alert System (supports webhooks + custom emails)
-            if ( $issues > 0 ) {
-                Alert_System::send_alert(
-                    'threat Scan Complete â€” Threats Detected',
+            // Also dispatch webhook notifications (supports Discord/Slack without duplicate emails)
+            if ( $issues > 0 && class_exists( '\Nexura_Security\Alert_System' ) ) {
+                Alert_System::send_webhook(
+                    'Threat Scan Complete — Threats Detected',
                     sprintf( '%d security threats were detected during a threat scan on %s. Please review and clean immediately.', $issues, site_url() ),
                     'high'
                 );
@@ -1090,7 +1092,45 @@ class Scanner {
             }
         }
 
-        // 1. Check for Suspicious File Extensions in Uploads Folder (Local Quick Check)
+        // 1a. HTML Defacement Content Scan (for .html / .htm files at root or anywhere)
+        $file_ext_check = strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) );
+        if ( in_array( $file_ext_check, [ 'html', 'htm' ], true ) ) {
+            $content_lower = strtolower( $content );
+            $defacement_keywords = [ 'hacked by', 'defaced by', 'owned by', 'greetz:', 'pwned by', 'h4ck3d', 'r00t3d', 'exploit by', 'xss by', 'cyber team' ];
+            foreach ( $defacement_keywords as $kw ) {
+                if ( strpos( $content_lower, $kw ) !== false ) {
+                    $findings[] = [
+                        'pattern'     => 'html_defacement_content',
+                        'risk'        => 'Critical',
+                        'description' => 'HTML defacement file detected (keyword: "' . $kw . '"). Site has been visually defaced by an attacker.',
+                        'confidence'  => 100,
+                        'line_number' => 0,
+                    ];
+                    break;
+                }
+            }
+        }
+
+        // 1b. Root script-type files (.py, .sh, .pl, .cgi, .phar) — always suspicious in WordPress root
+        if ( in_array( $file_ext_check, [ 'py', 'sh', 'pl', 'cgi', 'phar' ], true ) ) {
+            $script_labels = [
+                'py'   => 'Python script — possible CGI web shell or dropper',
+                'sh'   => 'Bash/shell script — critical server persistence indicator',
+                'pl'   => 'Perl script — commonly used for CGI web shells and backdoors',
+                'cgi'  => 'CGI script — executable web script, common attack vector',
+                'phar' => 'PHP Archive (.phar) — can execute arbitrary PHP code',
+            ];
+            $label = isset( $script_labels[ $file_ext_check ] ) ? $script_labels[ $file_ext_check ] : ucfirst( $file_ext_check ) . ' script';
+            $findings[] = [
+                'pattern'     => 'root_malicious_script_type: ' . $file_ext_check,
+                'risk'        => 'Critical',
+                'description' => 'Malicious script type in WordPress root: ' . $label . '. WordPress never places these files in root.',
+                'confidence'  => 98,
+                'line_number' => 0,
+            ];
+        }
+
+        // 2. Check for Suspicious File Extensions in Uploads Folder (Local Quick Check)
         static $upload_dir_cache = null;
         if ( $upload_dir_cache === null ) {
             $upload_dir_cache = wp_upload_dir();

@@ -517,6 +517,23 @@ if ( ! defined( 'ABSPATH' ) ) {
                                 </label>
                                 <span style="font-size: 13px; color: #3b82f6; font-weight: bold;"><?php esc_html_e( 'Medium Events', 'nexura-security' ); ?></span>
                             </div>
+
+                            <!-- Anti-Email-Storm Hourly Rate Limit -->
+                            <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--nexura-border);">
+                                <label for="NEXURA_hourly_email_limit" style="font-weight: 600; display: block; margin-bottom: 6px;">
+                                    <?php esc_html_e( 'Hourly Email Limit (Quota Protection)', 'nexura-security' ); ?>
+                                </label>
+                                <select name="NEXURA_hourly_email_limit" id="NEXURA_hourly_email_limit" style="min-width: 150px;">
+                                    <?php $current_limit = (int) get_option( 'NEXURA_hourly_email_limit', 5 ); ?>
+                                    <option value="3" <?php selected( $current_limit, 3 ); ?>><?php esc_html_e( '3 emails / hr (Strict)', 'nexura-security' ); ?></option>
+                                    <option value="5" <?php selected( $current_limit, 5 ); ?>><?php esc_html_e( '5 emails / hr (Recommended)', 'nexura-security' ); ?></option>
+                                    <option value="10" <?php selected( $current_limit, 10 ); ?>><?php esc_html_e( '10 emails / hr (Standard)', 'nexura-security' ); ?></option>
+                                    <option value="15" <?php selected( $current_limit, 15 ); ?>><?php esc_html_e( '15 emails / hr (High)', 'nexura-security' ); ?></option>
+                                </select>
+                                <p class="description" style="margin-top: 4px;">
+                                    <?php esc_html_e( 'Prevents hosting account suspension during brute-force bot storms. Surplus alerts are buffered into a consolidated hourly digest.', 'nexura-security' ); ?>
+                                </p>
+                            </div>
                         </div>
                         
                         <!-- Webhook Alert Toggle -->

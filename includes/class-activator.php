@@ -124,6 +124,20 @@ class Activator {
             KEY created_at (created_at)
         ) $charset_collate;";
 
+        $table_reinfection = $wpdb->prefix . 'NEXURA_reinfection_guard';
+        $sql_reinfection = "CREATE TABLE $table_reinfection (
+            id bigint(20) NOT NULL AUTO_INCREMENT,
+            file_path text NOT NULL,
+            reinfection_type varchar(50) NOT NULL,
+            source_evidence text NOT NULL,
+            risk_score int(11) NOT NULL,
+            status varchar(20) DEFAULT 'investigating' NOT NULL,
+            detected_at datetime DEFAULT CURRENT_TIMESTAMP NOT NULL,
+            resolved_at datetime DEFAULT NULL,
+            PRIMARY KEY  (id),
+            KEY status (status)
+        ) $charset_collate;";
+
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta( $sql );
         dbDelta( $sql_queue );
@@ -132,6 +146,16 @@ class Activator {
         dbDelta( $sql_attack_logs );
         dbDelta( $sql_audit_logs );
         dbDelta( $sql_visitor_logs );
+        dbDelta( $sql_reinfection );
+
+        // Record Reinfection Guard DB schema version for future migrations
+        if ( ! defined( 'NEXURA_REINFECTION_DB_VERSION' ) ) {
+            define( 'NEXURA_REINFECTION_DB_VERSION', '1.0.0' );
+        }
+        $installed_version = get_option( 'NEXURA_reinfection_db_version', '0.0.0' );
+        if ( version_compare( $installed_version, '1.0.0', '<' ) ) {
+            update_option( 'NEXURA_reinfection_db_version', '1.0.0', false );
+        }
 
         // Record install date for Rate Us notice
         Rate_Us_Notice::record_install_date();

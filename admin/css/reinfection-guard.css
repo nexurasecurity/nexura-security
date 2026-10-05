@@ -1,0 +1,454 @@
+/* ==========================================================================
+   Nexura Security — Reinfection Guard Enterprise Styles
+   ========================================================================== */
+
+/* Empty / Ready State */
+.nexura-rg-empty-state {
+    min-height: 320px;
+    border: 1px dashed var(--nexura-border);
+    background: rgba(15, 23, 42, 0.35);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 50px 20px;
+    border-radius: var(--nexura-radius-sm);
+    text-align: center;
+    width: 100%;
+}
+
+/* Summary KPI Ribbon — 4 columns on desktop matching Nexura theme */
+.nexura-rg-summary-ribbon {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 24px;
+    width: 100%;
+}
+
+@media (max-width: 1200px) {
+    .nexura-rg-summary-ribbon {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .nexura-rg-summary-ribbon {
+        grid-template-columns: 1fr;
+    }
+}
+
+.nexura-rg-kpi-card {
+    background: var(--nexura-bg-card);
+    border: 1px solid var(--nexura-border);
+    border-radius: var(--nexura-radius);
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: var(--nexura-transition);
+    backdrop-filter: blur(12px);
+}
+
+.nexura-rg-kpi-card:hover {
+    border-color: var(--nexura-border-glow);
+    background: rgba(30, 41, 59, 0.85);
+    transform: translateY(-2px);
+    box-shadow: var(--nexura-shadow-glow);
+}
+
+.nexura-rg-kpi-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--nexura-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.nexura-rg-kpi-icon.critical {
+    background: var(--nexura-red-bg);
+    color: var(--nexura-red);
+}
+
+.nexura-rg-kpi-icon.warning {
+    background: var(--nexura-yellow-bg);
+    color: var(--nexura-yellow);
+}
+
+.nexura-rg-kpi-icon.safe {
+    background: var(--nexura-green-bg);
+    color: var(--nexura-green);
+}
+
+.nexura-rg-kpi-icon.accent {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--nexura-accent-light);
+}
+
+.nexura-rg-kpi-label {
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--nexura-text-muted);
+    margin-bottom: 4px;
+}
+
+.nexura-rg-kpi-val {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--nexura-text-primary);
+    line-height: 1.2;
+}
+
+/* Card Header Extras */
+.nexura-rg-header-flex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.nexura-rg-graph-legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--nexura-text-secondary);
+    font-weight: 500;
+}
+
+.nexura-rg-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nexura-rg-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.nexura-rg-legend-dot.target {
+    background: #ef4444;
+    border-radius: 2px;
+    transform: rotate(45deg);
+}
+
+.nexura-rg-legend-dot.critical { background: #ef4444; }
+.nexura-rg-legend-dot.high { background: #ea580c; }
+.nexura-rg-legend-dot.medium { background: #eab308; }
+
+/* Graph Canvas Container */
+.nexura-rg-graph-canvas-wrap {
+    width: 100%;
+    height: 480px;
+    position: relative;
+    background: radial-gradient(circle at center, rgba(30, 41, 59, 0.45) 0%, rgba(11, 15, 26, 0.98) 100%);
+    border: 1px solid var(--nexura-border);
+    border-radius: var(--nexura-radius-sm);
+    overflow: hidden;
+}
+
+#nexura_cy_graph {
+    width: 100%;
+    height: 100%;
+    outline: none;
+}
+
+/* Findings Table */
+.nexura-rg-table-responsive {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.nexura-rg-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.nexura-rg-table thead th {
+    background: rgba(99, 102, 241, 0.08);
+    color: var(--nexura-text-muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--nexura-border);
+    text-align: left;
+}
+
+.nexura-rg-table tbody tr {
+    transition: var(--nexura-transition);
+}
+
+.nexura-rg-table tbody tr:hover {
+    background: rgba(99, 102, 241, 0.06);
+}
+
+.nexura-rg-table tbody td {
+    padding: 14px 18px;
+    font-size: 13px;
+    color: var(--nexura-text-secondary);
+    border-bottom: 1px solid rgba(99, 102, 241, 0.08);
+    vertical-align: middle;
+}
+
+.nexura-rg-code {
+    font-family: 'JetBrains Mono', Consolas, Monaco, monospace;
+    font-size: 12px;
+    color: var(--nexura-accent-light);
+    background: rgba(99, 102, 241, 0.08);
+    padding: 5px 10px;
+    border-radius: 4px;
+    word-break: break-all;
+    display: inline-block;
+    border: 1px solid rgba(99, 102, 241, 0.12);
+}
+
+.nexura-rg-remediated-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 700;
+    background: var(--nexura-green-bg);
+    color: var(--nexura-green);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+/* Pagination Bar */
+.nexura-rg-pagination-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-top: 1px solid var(--nexura-border);
+    background: rgba(15, 23, 42, 0.45);
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.nexura-rg-pagination-info {
+    font-size: 13px;
+    color: var(--nexura-text-muted);
+}
+
+.nexura-rg-pagination-info strong {
+    color: var(--nexura-text-primary);
+}
+
+.nexura-rg-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.nexura-rg-page-btn {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--nexura-radius-sm);
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid var(--nexura-border);
+    color: var(--nexura-text-secondary);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--nexura-transition);
+}
+
+.nexura-rg-page-btn:hover:not(:disabled) {
+    background: rgba(99, 102, 241, 0.2);
+    border-color: var(--nexura-accent);
+    color: var(--nexura-text-primary);
+}
+
+.nexura-rg-page-btn.active {
+    background: linear-gradient(135deg, var(--nexura-accent), #4f46e5);
+    border-color: var(--nexura-accent-light);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+}
+
+.nexura-rg-page-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: transparent;
+    border-color: rgba(99, 102, 241, 0.08);
+}
+
+/* PRO Locked Evidence Styles */
+.nexura-rg-pro-locked-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.nexura-rg-code.nexura-rg-blurred {
+    filter: blur(4.5px);
+    -webkit-filter: blur(4.5px);
+    user-select: none;
+    pointer-events: none;
+    opacity: 0.55;
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.nexura-rg-pro-unlock-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #ec4899, #8b5cf6);
+    color: #fff !important;
+    text-decoration: none !important;
+    box-shadow: 0 2px 8px rgba(236, 72, 153, 0.35);
+    transition: var(--nexura-transition);
+}
+
+.nexura-rg-pro-unlock-badge:hover {
+    color: #fff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(236, 72, 153, 0.5);
+}
+
+.nexura-badge-pro-tag {
+    background: linear-gradient(135deg, #ec4899, #8b5cf6);
+    color: #fff;
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.6px;
+    margin-left: 6px;
+    vertical-align: middle;
+    text-transform: uppercase;
+    display: inline-block;
+}
+
+.nexura-remediate-btn-locked {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    padding: 6px 14px;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(236, 72, 153, 0.35);
+    color: var(--nexura-text-primary) !important;
+    text-decoration: none !important;
+    border-radius: var(--nexura-radius-sm, 6px);
+    transition: var(--nexura-transition);
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.nexura-remediate-btn-locked:hover {
+    background: rgba(236, 72, 153, 0.15);
+    border-color: #ec4899;
+    color: #fff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 10px rgba(236, 72, 153, 0.25);
+}
+
+/* Pro Callout Banner for Free Version (Clean & Guideline-Compliant) */
+.nexura-rg-pro-callout {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 16px 20px;
+    margin: 0 0 20px 0;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(236, 72, 153, 0.08) 100%);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: var(--nexura-radius-sm, 8px);
+    backdrop-filter: blur(8px);
+}
+
+@media (max-width: 768px) {
+    .nexura-rg-pro-callout {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+.nexura-rg-pro-callout-icon {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ec4899, #8b5cf6);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+}
+
+.nexura-rg-pro-callout-body {
+    flex: 1;
+}
+
+.nexura-rg-pro-callout-body h4 {
+    margin: 0 0 4px 0;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: var(--nexura-text-primary);
+}
+
+.nexura-rg-pro-callout-body p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--nexura-text-secondary);
+}
+
+/* Copy Path Button in Table */
+.nexura-copy-path-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--nexura-text-muted);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--nexura-border);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--nexura-transition);
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.nexura-copy-path-btn:hover {
+    color: var(--nexura-text-primary);
+    background: rgba(99, 102, 241, 0.15);
+    border-color: rgba(99, 102, 241, 0.4);
+}
+
+.nexura-copy-path-btn.copied {
+    color: #10b981;
+    border-color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+

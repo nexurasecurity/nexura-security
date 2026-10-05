@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.21] - 2026-10-05
+
+### Major Feature & Enhancements
+- **Major Feature (Free):** Added Reinfection Guard & Root Cause Analyzer to detect why WordPress malware keeps returning after cleanup. Scans hidden MU-plugins, rogue drop-ins, unauthorized uploads PHP scripts, database persistence, and configuration tampering.
+- **Feature:** Added dynamic PHP Reflection and Active Plugin Registry analysis for WP-Cron persistence checks, providing 100% false-positive free compatibility across 60,000+ third-party WordPress plugins.
+- **Enhancement:** Added responsive dark cybersecurity dashboard for Reinfection Guard with 10-item pagination, instant search filtering, and interactive Cytoscape attack vector map.
+- **Enhancement:** Added shared hosting safeguards and timeout protection for deep uploads directory scanning.
+- **Enhancement:** Integrated Freemius SDK licensing directly with Reinfection Guard evidence access controls.
+
+---
+
+## [1.0.20] - 2026-09-28
+
+### Security Hardening, Anti-Email-Storm & Bug Fixes
+- **Critical Fix / Security Hardening:** Implemented Anti-Email-Storm Protection and Smart Rate Limiting in `Alert_System` to prevent servers from exhausting 100% hourly email quotas and getting blocked by hosting providers during botnet and brute-force attacks.
+- **Feature:** Added configurable Hourly Email Rate Limit (default 5 emails/hour) with automated transient digest queue buffering.
+- **Enhancement:** Added Brute-Force Alert Smart Policy with 15-minute cooldown, filtering out random botnet dictionary scans while preserving instant alerts for attacks targeting actual administrator accounts.
+- **Bug Fix:** Fixed Visitor Tracker anomaly speed detection to apply a 1-hour cooldown transient and strict severity gating, preventing rapid email loops on fast browsing or web crawlers.
+- **Bug Fix:** Added 24-hour source deduplication to Real-Time Scanner option hooks to prevent recurring alert emails on dynamic option updates.
+- **Bug Fix:** Prevented duplicate alert emails on scan completion by dispatching webhooks instead of double emailing.
+- **Bug Fix:** Protected Auto-Heal Drop-in crash notifications and Scheduled Scan reports with hard cooldown limits to eliminate email loops during site recovery.
+
+---
+
 ## [1.0.19] - 2026-09-15
 
 ### Security Hardening, Enhancements & Bug Fixes

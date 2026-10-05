@@ -139,6 +139,78 @@ class Rest_Controller extends WP_REST_Controller {
             ]
         ] );
 
+        // Reinfection Guard Init endpoint
+        register_rest_route( $this->namespace, '/reinfection/init', [
+            [
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => [ $this, 'reinfection_init' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ]
+        ] );
+
+        // Reinfection Guard Step endpoint
+        register_rest_route( $this->namespace, '/reinfection/step', [
+            [
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => [ $this, 'reinfection_step' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ]
+        ] );
+
+        // Reinfection Guard Remediate endpoint
+        register_rest_route( $this->namespace, '/reinfection/remediate', [
+            [
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => [ $this, 'reinfection_remediate' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ]
+        ] );
+
+        // Reinfection Guard Status endpoint
+        register_rest_route( $this->namespace, '/reinfection/status', [
+            [
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => [ $this, 'reinfection_status' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ]
+        ] );
+
+        // Reinfection Guard Results endpoint
+        register_rest_route( $this->namespace, '/reinfection/results', [
+            [
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => [ $this, 'reinfection_results' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ]
+        ] );
+
+        // Reinfection Guard Quarantine (quarantine a specific finding path) endpoint
+        register_rest_route( $this->namespace, '/reinfection/quarantine', [
+            [
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => [ $this, 'reinfection_quarantine' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ]
+        ] );
+
+        // Reinfection Guard Verify endpoint (check if malware has returned)
+        register_rest_route( $this->namespace, '/reinfection/verify', [
+            [
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => [ $this, 'reinfection_verify' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ]
+        ] );
+
+        // Reinfection Guard Clear History endpoint
+        register_rest_route( $this->namespace, '/reinfection/clear', [
+            [
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => [ $this, 'reinfection_clear' ],
+                'permission_callback' => [ $this, 'check_permissions' ],
+            ]
+        ] );
+
     }
 
     /**
@@ -411,7 +483,202 @@ class Rest_Controller extends WP_REST_Controller {
         return rest_ensure_response( [ 'success' => true, 'data' => $response ] );
     }
 
+    /**
+     * Reinfection Guard Init
+     */
+    public function reinfection_init( $request ) {
+        if ( ! class_exists( '\Nexura_Security\Reinfection_Engine' ) ) {
+            return new \WP_Error( 'module_missing', 'Reinfection Engine not loaded.', [ 'status' => 500 ] );
+        }
+        
+        $engine = new Reinfection_Engine();
+        $target_file = $request->get_param( 'target_file' ) ? sanitize_text_field( $request->get_param( 'target_file' ) ) : '';
+        $engine->start_investigation( $target_file );
+        
+        return rest_ensure_response( [ 'success' => true, 'message' => 'Investigation initialized.' ] );
+    }
+
+    /**
+     * Reinfection Guard Step - process one batch step.
+     * Returns `done: true` with the full report when complete.
+     */
+    public function reinfection_step( $request ) {
+        if ( ! class_exists( '\Nexura_Security\Reinfection_Engine' ) ) {
+            return new \WP_Error( 'module_missing', 'Reinfection Engine not loaded.', [ 'status' => 500 ] );
+        }
+        
+        $engine = new Reinfection_Engine();
+        $result = $engine->process_step();
+
+        $is_pro = function_exists( 'nexura_is_pro' ) && nexura_is_pro();
+        if ( ! $is_pro && ! empty( $result['done'] ) && ! empty( $result['report'] ) && is_array( $result['report'] ) ) {
+            $result['report'] = $this->mask_reinfection_report_for_free( $result['report'] );
+        }
+        
+        return rest_ensure_response( array_merge( [ 'success' => true ], $result ) );
+    }
+
+    /**
+     * Reinfection Guard Remediate
+     */
+    public function reinfection_remediate( $request ) {
+        if ( ! function_exists( 'nexura_is_pro' ) || ! nexura_is_pro() ) {
+            return new \WP_Error( 'pro_required', __( '1-Click Remediation is a Pro feature. Please upgrade to Nexura Pro.', 'nexura-security' ), [ 'status' => 403 ] );
+        }
+
+        if ( ! class_exists( '\Nexura_Security\Reinfection_Remediator' ) ) {
+            return new \WP_Error( 'module_missing', 'Reinfection Remediator not loaded.', [ 'status' => 500 ] );
+        }
+
+        $finding_type   = sanitize_text_field( $request->get_param( 'type' ) );
+        $finding_path   = sanitize_text_field( $request->get_param( 'path' ) );
+        $finding_hook   = sanitize_text_field( $request->get_param( 'hook' ) );
+        $finding_option = sanitize_text_field( $request->get_param( 'option' ) );
+
+        $finding = [
+            'type'   => $finding_type,
+            'path'   => $finding_path,
+            'hook'   => $finding_hook,
+            'option' => $finding_option
+        ];
+
+        $remediator = new Reinfection_Remediator();
+        $result = $remediator->remediate( $finding );
+
+        // Record snapshot for verification after remediation
+        if ( ! empty( $result['success'] ) && ! empty( $finding_path ) && class_exists( '\Nexura_Security\Reinfection_Verifier' ) ) {
+            $verifier = new Reinfection_Verifier();
+            $verifier->record_snapshot( $finding_path, $finding_type );
+        }
+
+        // Persist remediated status into saved result option so page reload preserves state
+        if ( ! empty( $result['success'] ) ) {
+            $saved_report = get_option( 'NEXURA_reinfection_result', null );
+            if ( is_array( $saved_report ) && ! empty( $saved_report['evidence'] ) ) {
+                foreach ( $saved_report['evidence'] as &$ev ) {
+                    $matched = false;
+                    if ( ! empty( $finding_path ) && isset( $ev['path'] ) && $ev['path'] === $finding_path ) {
+                        $matched = true;
+                    } elseif ( ! empty( $finding_hook ) && isset( $ev['hook'] ) && $ev['hook'] === $finding_hook ) {
+                        $matched = true;
+                    } elseif ( ! empty( $finding_option ) && isset( $ev['option'] ) && $ev['option'] === $finding_option ) {
+                        $matched = true;
+                    }
+                    if ( $matched ) {
+                        $ev['remediated'] = true;
+                    }
+                }
+                update_option( 'NEXURA_reinfection_result', $saved_report, false );
+            }
+        }
+
+        return rest_ensure_response( $result );
+    }
+
+    /**
+     * Reinfection Guard Status — returns the current investigation state.
+     */
+    public function reinfection_status( $request ) {
+        $state = get_option( 'NEXURA_reinfection_state', null );
+        if ( ! $state ) {
+            return rest_ensure_response( [ 'success' => true, 'status' => 'idle', 'message' => 'No investigation running.' ] );
+        }
+        return rest_ensure_response( [ 'success' => true, 'status' => $state['status'], 'steps' => $state['steps'] ] );
+    }
+
+    /**
+     * Reinfection Guard Results — returns the saved investigation report.
+     */
+    public function reinfection_results( $request ) {
+        $report = get_option( 'NEXURA_reinfection_result', null );
+        if ( ! $report ) {
+            return rest_ensure_response( [ 'success' => true, 'report' => null, 'message' => 'No results available. Run an investigation first.' ] );
+        }
+
+        $is_pro = function_exists( 'nexura_is_pro' ) && nexura_is_pro();
+        if ( ! $is_pro && is_array( $report ) ) {
+            $report = $this->mask_reinfection_report_for_free( $report );
+        }
+
+        return rest_ensure_response( [ 'success' => true, 'report' => $report ] );
+    }
+
+    /**
+     * Reinfection Guard Quarantine — directly quarantine a file path.
+     */
+    public function reinfection_quarantine( $request ) {
+        if ( ! function_exists( 'nexura_is_pro' ) || ! nexura_is_pro() ) {
+            return new \WP_Error( 'pro_required', __( 'Quarantine is a Pro feature. Please upgrade to Nexura Pro.', 'nexura-security' ), [ 'status' => 403 ] );
+        }
+
+        if ( ! class_exists( '\Nexura_Security\Quarantine' ) ) {
+            return new \WP_Error( 'module_missing', 'Quarantine module not available.', [ 'status' => 500 ] );
+        }
+
+        $file_path = sanitize_text_field( $request->get_param( 'path' ) );
+        if ( empty( $file_path ) || ! file_exists( $file_path ) ) {
+            return new \WP_Error( 'invalid_path', 'File path is invalid or file does not exist.', [ 'status' => 400 ] );
+        }
+
+        $quarantine = new Quarantine();
+        $result = $quarantine->quarantine_file( $file_path );
+
+
+        if ( $result && ! is_wp_error( $result ) ) {
+            // Record for later verification
+            if ( class_exists( '\Nexura_Security\Reinfection_Verifier' ) ) {
+                $verifier = new Reinfection_Verifier();
+                $verifier->record_snapshot( $file_path, 'manual_quarantine' );
+            }
+            return rest_ensure_response( [ 'success' => true, 'quarantined_to' => $result ] );
+        }
+
+        return rest_ensure_response( [ 'success' => false, 'message' => 'Quarantine failed.' ] );
+    }
+
+    /**
+     * Reinfection Guard Verify — check if remediated malware has returned.
+     */
+    public function reinfection_verify( $request ) {
+        if ( ! class_exists( '\Nexura_Security\Reinfection_Verifier' ) ) {
+            return new \WP_Error( 'module_missing', 'Reinfection Verifier not loaded.', [ 'status' => 500 ] );
+        }
+
+        $verifier = new Reinfection_Verifier();
+        $file_path = sanitize_text_field( $request->get_param( 'path' ) );
+
+        if ( ! empty( $file_path ) ) {
+            $result = $verifier->verify_file( $file_path );
+        } else {
+            $result = $verifier->verify_all();
+        }
+
+        return rest_ensure_response( [ 'success' => true, 'data' => $result ] );
+    }
+
+    /**
+     * Reinfection Guard Clear — resets saved investigation results and state.
+     */
+    public function reinfection_clear( $request ) {
+        delete_option( 'NEXURA_reinfection_result' );
+        delete_option( 'NEXURA_reinfection_state' );
+        return rest_ensure_response( [ 'success' => true, 'message' => 'Investigation results cleared.' ] );
+    }
+
+    /**
+     * Prepare reinfection report for free tier.
+     * Full diagnostic findings (file paths, persistence mechanisms) are transparently
+     * provided in compliance with WordPress.org Guidelines (Guideline 5: No Crippleware).
+     * Automated remediation and quarantine remain strictly protected behind Pro checks.
+     *
+     * @param array $report
+     * @return array
+     */
+    private function mask_reinfection_report_for_free( $report ) {
+        return $report;
+    }
 
 }
+
 
 

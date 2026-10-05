@@ -123,34 +123,12 @@ class Audit_Logger {
     }
 
     /**
-     * Sends an email alert for critical events.
+     * Sends an email alert for critical events via Alert_System (quota & rate-limit protected).
      */
     private function send_alert_email( $username, $subject_prefix, $severity = 'critical' ) {
-        // Check global alert toggle
-        if ( get_option( 'NEXURA_enable_email_alerts' ) !== '1' ) {
-            return;
-        }
-
-        // Check specific severity toggles
-        if ( $severity === 'critical' && get_option( 'NEXURA_email_alerts_critical', '1' ) !== '1' ) {
-            return;
-        }
-        if ( $severity === 'high' && get_option( 'NEXURA_email_alerts_high', '1' ) !== '1' ) {
-            return;
-        }
-        if ( $severity === 'medium' && get_option( 'NEXURA_email_alerts_medium', '0' ) !== '1' ) {
-            return;
-        }
-
-        $admin_email = get_option( 'NEXURA_alert_email_address' );
-        if ( empty( $admin_email ) ) {
-            $admin_email = get_option( 'admin_email' );
-        }
-
-        $site_name = wp_specialchars_decode( get_option( 'blogname' ), ENT_QUOTES );
         $ip = $this->get_client_ip();
         
-        $subject = sprintf( '[%s] Security Alert: %s', $site_name, $subject_prefix );
+        $title   = sprintf( '%s: %s', $subject_prefix, $username );
         $message = sprintf(
             /* translators: 1: Event type, 2: Username, 3: IP Address, 4: Severity, 5: Timestamp */
             __( "A security event occurred on your site:\n\nEvent: %1\$s\nUser: %2\$s\nIP Address: %3\$s\nSeverity: %4\$s\nTime: %5\$s\n\nIf you did not authorize this action, please investigate immediately.", 'nexura-security' ),
@@ -161,10 +139,8 @@ class Audit_Logger {
             current_time( 'mysql' )
         );
 
-        try {
-            wp_mail( $admin_email, $subject, $message );
-        } catch ( \Throwable $e ) {
-            // Silently catch mailer exceptions
+        if ( class_exists( '\Nexura_Security\Alert_System' ) ) {
+            Alert_System::send_alert( $title, $message, $severity );
         }
     }
 

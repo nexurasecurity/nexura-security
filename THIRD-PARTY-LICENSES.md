@@ -11,3 +11,9 @@ This plugin utilizes the following third-party libraries. All are GPL-compatible
 - **License:** SIL OFL 1.1 (Fonts), MIT (Code), CC BY 4.0 (Icons) - All GPL friendly.
 - **Source:** https://fontawesome.com/
 - **Location:** `vendor/freemius/assets/`
+
+## Cytoscape.js
+- **License:** MIT License
+- **Source:** https://js.cytoscape.org/
+- **Location:** `admin/js/cytoscape.min.js`
+

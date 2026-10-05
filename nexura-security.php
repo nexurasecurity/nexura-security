@@ -4,7 +4,7 @@
  * Plugin Name: Nexura Security
  * Plugin URI: https://wordpress.org/plugins/nexura-security/
  * Description: Enterprise-level WordPress security plugin with malware scanning, file integrity monitoring, vulnerability auditing, and Google Safe Browsing integration.
- * Version: 1.0.19
+ * Version: 1.0.21
  * Author: Nexura Security
  * Author URI: https://profiles.wordpress.org/nexurasecurity/
  * License: GPL-2.0+
@@ -73,7 +73,7 @@ add_action( 'admin_init', function () {
 // phpcs:enable
 // Define Constants
 if ( !defined( 'NEXURA_VERSION' ) ) {
-    define( 'NEXURA_VERSION', '1.0.19' );
+    define( 'NEXURA_VERSION', '1.0.21' );
 }
 if ( !defined( 'NEXURA_PLUGIN_DIR' ) ) {
     define( 'NEXURA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
@@ -110,15 +110,10 @@ if ( !class_exists( 'Nexura_Security' ) ) {
  */
 if ( !function_exists( 'nexura_is_pro' ) ) {
     function nexura_is_pro() {
-        static $is_pro = null;
-        if ( $is_pro === null ) {
-            $is_pro = false;
-            // Check if the SDK has premium plan active
-            if ( function_exists( 'nsp_fs' ) && nsp_fs()->can_use_premium_code() ) {
-                $is_pro = true;
-            }
+        if ( function_exists( 'nsp_fs' ) ) {
+            return nsp_fs()->can_use_premium_code();
         }
-        return $is_pro;
+        return false;
     }
 
 }
@@ -133,12 +128,20 @@ spl_autoload_register( function ( $class ) {
     $relative_class = substr( $class, $len );
     $filename = 'class-' . strtolower( str_replace( '_', '-', $relative_class ) ) . '.php';
     $file = $base_dir . $filename;
+    $reinfection_file = $base_dir . 'reinfection/' . $filename;
     $pro_file = $base_dir . 'pro/' . $filename;
     if ( file_exists( $file ) ) {
         require $file;
         return;
     }
-    if ( function_exists( 'nsp_fs' ) ) {
+    if ( file_exists( $reinfection_file ) ) {
+        require $reinfection_file;
+        return;
+    }
+    if ( function_exists( 'nexura_is_pro' ) && nexura_is_pro() ) {
+        if ( file_exists( $pro_file ) ) {
+            require $pro_file;
+        }
     }
 } );
 /**

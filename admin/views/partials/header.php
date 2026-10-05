@@ -24,7 +24,23 @@ $NEXURA_total_issues = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefi
         <div class="nexura-topbar-brand">
             <div class="nexura-topbar-logo"><img src="<?php echo esc_url( NEXURA_PLUGIN_URL . 'admin/img/icon.png' ); ?>" alt="Nexura Security Logo" ></div>
             <div>
-                <div class="nexura-topbar-title">Nexura Security <span class="nexura-plan-badge"><?php echo esc_html( ucfirst( nexura_is_pro() ? 'Pro' : 'Free' ) ); ?></span></div>
+                <?php
+                $NEXURA_is_pro = function_exists( 'nexura_is_pro' ) && nexura_is_pro();
+                $NEXURA_topbar_upgrade_url = ( function_exists( 'nsp_fs' ) && nsp_fs()->is_pricing_page_visible() )
+                    ? nsp_fs()->get_upgrade_url()
+                    : ( function_exists( 'nsp_fs' ) ? nsp_fs()->get_upgrade_url() : admin_url( 'admin.php?page=nexura-pricing' ) );
+                ?>
+                <div class="nexura-topbar-title">
+                    Nexura Security 
+                    <?php if ( $NEXURA_is_pro ) : ?>
+                        <span class="nexura-plan-badge"><?php esc_html_e( 'Pro', 'nexura-security' ); ?></span>
+                    <?php else : ?>
+                        <a href="<?php echo esc_url( $NEXURA_topbar_upgrade_url ); ?>" class="nexura-plan-badge nexura-topbar-upgrade-badge" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); color: #ffffff !important; text-decoration: none !important; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 12px; letter-spacing: 0.4px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4); text-transform: uppercase;">
+                            <svg width="11" height="11" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="vertical-align: -1px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            <?php esc_html_e( 'Upgrade Pro', 'nexura-security' ); ?>
+                        </a>
+                    <?php endif; ?>
+                </div>
                 <div class="nexura-topbar-subtitle">Enterprise Security Control Center</div>
             </div>
         </div>

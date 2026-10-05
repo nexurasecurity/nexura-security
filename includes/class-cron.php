@@ -81,7 +81,7 @@ class Cron {
         if ( $response['status'] === 'processing' ) {
             // Re-schedule this event to run immediately so it processes the next chunk
             wp_schedule_single_event( time(), 'NEXURA_process_queue' );
-        } else {
+        } elseif ( $response['status'] === 'completed' && ! empty( $response['processed'] ) && (int) $response['processed'] > 0 ) {
             if ( class_exists( '\Nexura_Security\Logger' ) ) {
                 Logger::log( 'Automated scheduled scan completed. Processed ' . $response['processed'] . ' files, found ' . $response['issues'] . ' issues.' );
             }

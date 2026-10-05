@@ -129,6 +129,13 @@ class Nexura_Fatal_Error_Handler extends WP_Fatal_Error_Handler {
     }
 
     private function notify_admin( $type, $name, $error ) {
+        if ( function_exists( 'get_transient' ) && get_transient( 'nexura_auto_heal_alert_' . md5( $name ) ) ) {
+            return;
+        }
+        if ( function_exists( 'set_transient' ) ) {
+            set_transient( 'nexura_auto_heal_alert_' . md5( $name ), true, 3600 );
+        }
+
         if ( function_exists( 'wp_mail' ) ) {
             $to      = get_option( 'admin_email' );
             $subject = "[Nexura Auto-Heal] Site Crash Prevented";

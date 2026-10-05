@@ -846,6 +846,35 @@
     letter-spacing: 0.5px;
 }
 
+.nexura-topbar-upgrade-btn,
+.nexura-topbar-upgrade-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(135deg, #ec4899, #8b5cf6) !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    letter-spacing: 0.4px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
+    line-height: 1.4;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.nexura-topbar-upgrade-btn:hover,
+.nexura-topbar-upgrade-badge:hover {
+    color: #ffffff !important;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(236, 72, 153, 0.6);
+    background: linear-gradient(135deg, #f43f5e, #9333ea) !important;
+}
+
+
 /* ---------- WP List Table Override (inside plugin) ---------- */
 .nexura-wrap .wp-list-table {
     background: transparent;

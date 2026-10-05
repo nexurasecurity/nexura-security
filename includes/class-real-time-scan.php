@@ -196,11 +196,15 @@ class Real_Time_Scan {
             Logger::log( 'Real-Time Scan detected malware in: ' . $source );
         }
 
-        // Send instant security alert
-        Alert_System::send_alert(
-            'Real-Time Scan: Malware Detected',
-            sprintf( 'Nexura Security detected %d malicious pattern(s) in: %s. This was caught by the real-time file monitor.', count( $findings ), $source ),
-            'high'
-        );
+        // Send instant security alert (deduplicate per source for 24 hours to prevent email loops on option updates)
+        $dedup_key = 'NEXURA_rt_alert_' . md5( $source );
+        if ( ! get_transient( $dedup_key ) ) {
+            set_transient( $dedup_key, true, 24 * HOUR_IN_SECONDS );
+            Alert_System::send_alert(
+                'Real-Time Scan: Malware Detected',
+                sprintf( 'Nexura Security detected %d malicious pattern(s) in: %s. This was caught by the real-time file monitor.', count( $findings ), $source ),
+                'high'
+            );
+        }
     }
 }

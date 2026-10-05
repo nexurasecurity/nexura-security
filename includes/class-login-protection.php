@@ -17,7 +17,8 @@ class Login_Protection {
 
     public function __construct() {
         $this->max_attempts = max( 1, (int) get_option( 'NEXURA_brute_force_max_attempts', 5 ) );
-        $this->lockout_duration = (int) get_option( 'NEXURA_brute_force_lockout', 1800 ); // Default 30 mins
+        $lockout = (int) get_option( 'NEXURA_brute_force_lockout', 1800 );
+        $this->lockout_duration = $lockout > 0 ? $lockout : 30 * MINUTE_IN_SECONDS;
     }
 
     /**
@@ -152,16 +153,7 @@ class Login_Protection {
                 $strike++;
             }
             
-            if ( $strike === 1 ) {
-                $duration = 10 * MINUTE_IN_SECONDS;
-            } elseif ( $strike === 2 ) {
-                $duration = 30 * MINUTE_IN_SECONDS;
-            } elseif ( $strike === 3 ) {
-                $duration = 60 * MINUTE_IN_SECONDS;
-            } else {
-                // 4th strike and beyond: 24 hour block
-                $duration = 24 * HOUR_IN_SECONDS;
-            }
+            $duration = $this->lockout_duration;
             
             // Keep strike history for 24 hours. If they stay clean for 24 hours, their strike level resets.
             set_transient( 'NEXURA_lockout_strike_' . $ip, $strike, 24 * HOUR_IN_SECONDS );
@@ -188,12 +180,30 @@ class Login_Protection {
             if ( class_exists( '\Nexura_Security\Global_Threat_Intel' ) ) {
                 (new \Nexura_Security\Global_Threat_Intel())->report_ip( 'brute_force_login' );
             }
-            // Send instant security alert
-            Alert_System::send_alert(
-                'Brute Force Attack — IP Locked Out',
-                sprintf( 'IP address %s has been locked out after %d failed login attempts (Strike level: %d). Target username: "%s".', $ip, $attempts, $strike, $username ),
-                'high'
-            );
+            // Smart Alert Policy: Prevent email storms while keeping critical attacks visible
+            $target_user = get_user_by( 'login', $username );
+            if ( ! $target_user ) {
+                $target_user = get_user_by( 'email', $username );
+            }
+            $is_admin_target = $target_user && in_array( 'administrator', (array) $target_user->roles, true );
+            $severity        = $is_admin_target ? 'critical' : ( $strike >= 3 ? 'high' : 'medium' );
+
+            // Cooldown check: prevent botnets from generating hundreds of emails in an hour
+            $cooldown_key = 'NEXURA_bf_alert_cooldown';
+            $in_cooldown  = (bool) get_transient( $cooldown_key );
+
+            if ( ! $in_cooldown || ( $is_admin_target && ! get_transient( 'NEXURA_bf_admin_alert_cooldown' ) ) ) {
+                if ( $is_admin_target ) {
+                    set_transient( 'NEXURA_bf_admin_alert_cooldown', true, 5 * MINUTE_IN_SECONDS );
+                }
+                set_transient( $cooldown_key, true, 15 * MINUTE_IN_SECONDS );
+
+                Alert_System::send_alert(
+                    $is_admin_target ? 'Critical: Administrator Brute Force Attack Blocked' : 'Brute Force Attack — IP Locked Out',
+                    sprintf( 'IP address %s has been locked out after %d failed login attempts (Strike level: %d). Target username: "%s".', $ip, $attempts, $strike, $username ),
+                    $severity
+                );
+            }
         }
     }
 

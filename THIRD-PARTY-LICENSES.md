@@ -17,3 +17,12 @@ This plugin utilizes the following third-party libraries. All are GPL-compatible
 - **Source:** https://js.cytoscape.org/
 - **Location:** `admin/js/cytoscape.min.js`
 
+## Chart.js
+- **License:** MIT License
+- **Source:** https://www.chartjs.org/
+- **Location:** `admin/js/chart.umd.min.js`
+
+## MaxMind DB Reader PHP
+- **License:** Apache License 2.0
+- **Source:** https://github.com/maxmind/MaxMind-DB-Reader-php
+- **Location:** `includes/lib/MaxMind/`

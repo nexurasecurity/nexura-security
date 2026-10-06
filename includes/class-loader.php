@@ -184,7 +184,7 @@ class Loader {
             }
         }
 
-        if ( function_exists( 'nexura_is_pro' ) && nexura_is_pro() ) {
+        if ( function_exists( 'nexura_is_pro' ) && nexura_is_pro() && file_exists( NEXURA_PLUGIN_DIR . 'includes/pro/pro-init.php' ) ) {
             require_once NEXURA_PLUGIN_DIR . 'includes/pro/pro-init.php';
         }
 

@@ -3,7 +3,7 @@ Contributors: nexurasecurity, freemius
 Tags: security, malware scanner, firewall, two factor authentication, brute force protection
 Requires at least: 5.8
 Tested up to: 7.0.1
-Stable tag: 1.0.21
+Stable tag: 1.0.22
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -324,6 +324,9 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 
 == Changelog ==
 
+= 1.0.22 =
+* **Critical Fix:** Fixed a fatal error ("There has been a critical error on this website") on sites with an active trial or license running the WordPress.org version, caused by loading Pro files that are not included in the free build.
+
 = 1.0.21 =
 * **Major Feature (Free):** Added Reinfection Guard & Root Cause Analyzer to detect why WordPress malware keeps returning after cleanup. Scans hidden MU-plugins, rogue drop-ins, unauthorized uploads PHP scripts, database persistence, and configuration tampering.
 * **Feature:** Added dynamic PHP Reflection and Active Plugin Registry analysis for WP-Cron persistence checks, providing 100% false-positive free compatibility across 60,000+ third-party WordPress plugins.
@@ -499,6 +502,9 @@ For a full structured changelog, see [CHANGELOG.md](https://github.com/nexurasec
 ---
 
 == Upgrade Notice ==
+
+= 1.0.22 =
+Critical fix for fatal errors on WordPress.org builds when running an active trial or license. Strongly recommended for all users.
 
 = 1.0.10 =
 Major security hardening release. Adds Ghost Admin Protection, WAF encoded payload decoding, Wp2shell zero-day blocking, SSL MITM fix, and Open Redirect protection. **Strongly recommended for all users.**

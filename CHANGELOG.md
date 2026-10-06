@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.22] - 2026-10-06
+
+### Critical Bug Fix
+- **Critical Fix:** Fixed a fatal error ("There has been a critical error on this website") on sites with an active trial or license running the WordPress.org version, caused by loading Pro files that are not included in the free build.
+
+---
+
 ## [1.0.21] - 2026-10-05
 
 ### Major Feature & Enhancements

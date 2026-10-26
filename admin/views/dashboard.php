@@ -414,7 +414,7 @@ $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circu
                 $atk_start = ( ( $atk_page - 1 ) * $atk_per_page ) + 1;
                 $atk_end   = min( $atk_page * $atk_per_page, $atk_total );
                 /* translators: 1: first row, 2: last row, 3: total rows */
-                printf( esc_html__( 'Showing %1$d–%2$d of %3$d entries', 'nexura-security' ), $atk_start, $atk_end, $atk_total );
+                echo esc_html( sprintf( __( 'Showing %1$d–%2$d of %3$d entries', 'nexura-security' ), $atk_start, $atk_end, $atk_total ) );
                 ?>
             </div>
             <div style="display: flex; gap: 4px; flex-wrap: wrap;">

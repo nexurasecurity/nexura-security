@@ -220,4 +220,39 @@ return [
         'confidence'  => 99,
     ],
 
+    'php_input_eval_backdoor' => [
+        'pattern'     => '/(?:eval|assert|passthru|shell_exec|system)\s*\(\s*(?:base64_decode\s*\(\s*)?file_get_contents\s*\(\s*[\'"]php:\/\/input[\'"]\s*\)/i',
+        'description' => 'Raw HTTP stream execution backdoor (evaluates php://input payloads without standard POST/GET parameters).',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
+    'stealth_wp_user_creation' => [
+        'pattern'     => '/wp_create_user\s*\(.{0,60}\$.{0,60}\);\s*.*->set_role\s*\(\s*[\'"]administrator[\'"]\s*\)/is',
+        'description' => 'Stealth WordPress administrator user injection backdoor.',
+        'risk'        => 'Critical',
+        'confidence'  => 98,
+    ],
+
+    'godzilla_behinder_webshell' => [
+        'pattern'     => '/openssl_decrypt\s*\(.{0,80}[\'"]AES-(?:128|256)-CFB[\'"].{0,80}\$_(?:POST|COOKIE|SERVER)/is',
+        'description' => 'Godzilla / Behinder encrypted C2 webshell communicating via AES encrypted payloads.',
+        'risk'        => 'Critical',
+        'confidence'  => 99,
+    ],
+
+    'balada_injector_obfuscation' => [
+        'pattern'     => '/(?:String\.fromCharCode|document\.write\s*\(\s*unescape)\s*\(.{0,100}(?:src=[\'"]https?:\/\/|location\.replace)/i',
+        'description' => 'Balada Injector / malicious dynamic script redirect injection.',
+        'risk'        => 'Critical',
+        'confidence'  => 98,
+    ],
+
+    'fake_image_payload_dropper' => [
+        'pattern'     => '/\/\*[\s\S]*?\*\/<\?php\s+(?:eval|assert|include|require)\s*\(/i',
+        'description' => 'Polyglot image / comment prepended PHP backdoor execution.',
+        'risk'        => 'Critical',
+        'confidence'  => 96,
+    ],
+
 ];

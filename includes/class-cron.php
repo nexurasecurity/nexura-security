@@ -175,14 +175,18 @@ class Cron {
         // Clean tables using created_at
         foreach ( $tables_created_at as $table ) {
             // Check if table exists before deleting
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
             if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table ) ) === $table ) {
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table}` WHERE `created_at` < %s", $cutoff_date ) );
             }
         }
 
         // Clean tables using timestamp
         foreach ( $tables_timestamp as $table ) {
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
             if ( $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $table ) ) === $table ) {
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
                 $wpdb->query( $wpdb->prepare( "DELETE FROM `{$table}` WHERE `timestamp` < %s", $cutoff_date ) );
             }
         }

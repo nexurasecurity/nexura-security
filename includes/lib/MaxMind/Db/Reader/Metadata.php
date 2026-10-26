@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+// phpcs:ignoreFile WordPress.Security.EscapeOutput.ExceptionNotEscaped
+
 namespace MaxMind\Db\Reader;
 
 /**

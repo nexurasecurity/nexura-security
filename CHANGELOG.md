@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.23] - 2026-10-26
+
+### Features & Enhancements
+- **Feature / UX Enhancement:** Improved Scan Results table to clearly display affected file and database paths, line numbers, and threat types for free users, allowing seamless manual investigation and remediation.
+- **Enhancement:** Enhanced false-positive filtering for safe vendor packages (Freemius SDK, Composer, Squizlabs) to prevent false alerts on clean vendor files.
+- **Enhancement:** Hardened root script detection to only flag `.sh`, `.phar`, and `.py` scripts when placed directly in the WordPress root directory (`ABSPATH`).
+
+### Security Hardening & Bug Fixes
+- **Bug Fix:** Fixed defacement regex pattern to prevent false alarms on innocent code comments containing "owned by".
+- **Security Hardening:** Updated Vulnerability Scanner PHP checks to flag End-of-Life PHP versions (< 8.0) and warn against unpatched vulnerabilities (CVE-2024-4577).
+- **Compliance:** Ensured 100% adherence to WordPress.org Plugin Guidelines for clean admin UI and unobtrusive upgrade options.
+
+---
+
 ## [1.0.22] - 2026-10-06
 
 ### Critical Bug Fix

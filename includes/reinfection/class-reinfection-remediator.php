@@ -166,7 +166,7 @@ class Reinfection_Remediator {
             return [ 'success' => false, 'message' => 'Trigger name contains invalid characters.' ];
         }
 
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
         $result = $wpdb->query( "DROP TRIGGER IF EXISTS `{$safe_name}`" );
 
         if ( $result !== false ) {

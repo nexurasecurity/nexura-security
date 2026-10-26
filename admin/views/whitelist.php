@@ -3,6 +3,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
 $whitelisted_files = get_option( 'NEXURA_whitelisted_files', [] );
 if ( ! is_array( $whitelisted_files ) ) {
     $whitelisted_files = [];

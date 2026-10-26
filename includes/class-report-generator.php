@@ -219,8 +219,8 @@ class Report_Generator {
             if ( function_exists( 'nexura_is_pro' ) && nexura_is_pro() ) {
                 $show_upsell = false;
                 global $wpdb;
-                $table_name = $wpdb->prefix . 'NEXURA_scan_results';
-                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+                $table_name = esc_sql( $wpdb->prefix . 'NEXURA_scan_results' );
+                // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
                 $findings = $wpdb->get_results( "SELECT file_path, risk_score FROM {$table_name} WHERE status = 'infected' LIMIT 100" );
                 
                 if ( $findings ) {

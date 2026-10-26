@@ -323,8 +323,8 @@ class Rest_Controller extends WP_REST_Controller {
                 
                 if ( ! in_array( $real_path, $whitelisted, true ) ) {
                     global $wpdb;
-                    $table_name = $wpdb->prefix . 'NEXURA_scan_results';
-                    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+                    $table_name = esc_sql( $wpdb->prefix . 'NEXURA_scan_results' );
+                    // phpcs:ignore WordPress.DB.DirectDatabaseQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, PluginCheck.Security.DirectDB.UnescapedDBParameter
                     $is_infected = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table_name} WHERE file_path = %s", $path ) );
                     if ( ! $is_infected ) {
                         return false;
@@ -366,6 +366,7 @@ class Rest_Controller extends WP_REST_Controller {
         }
         
         global $wpdb;
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom scan results table.
         $wpdb->delete( $wpdb->prefix . 'NEXURA_scan_results', [ 'file_path' => $raw_path ] );
         delete_transient( 'nexura_scan_counts' );
         

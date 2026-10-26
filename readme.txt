@@ -1,9 +1,9 @@
 === Nexura Security — Malware Scanner, Firewall, 2FA & WordPress Security ===
 Contributors: nexurasecurity, freemius
-Tags: security, malware scanner, firewall, two factor authentication, brute force protection
+Tags: security, malware scanner, malware removal, firewall, two factor authentication
 Requires at least: 5.8
-Tested up to: 7.0.1
-Stable tag: 1.0.22
+Tested up to: 7.1
+Stable tag: 1.0.23
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -276,6 +276,12 @@ Nexura's built-in Google Safe Browsing Check lets you monitor your blacklist sta
 = How to Fix "This site may be hacked" Message in Google Search? =
 If you see "This site may be hacked" next to your domain in Google Search results, Google has detected SEO spam (like the Japanese keyword hack or Pharma hack) on your site. Nexura Security's deep scanner can find and remove these hidden spam injections so you can request a review and restore your SEO rankings.
 
+= Does Nexura Security protect against PHP 7 and PHP 8 exploits (like CVE-2024-4577)? =
+Yes. Nexura Security includes real-time vulnerability checks for PHP versions and its Pre-Boot WAF blocks CGI argument injection and remote code execution payloads (including CVE-2024-4577 and TellYouThePass/Kinsing botnet exploit signatures) before requests reach WordPress core.
+
+= Does Nexura Security cause false positives on third-party plugins? =
+No. In version 1.0.23, Nexura Security features an intelligent context-aware safe vendor filter for popular frameworks and packages (including Freemius SDK, Composer, Elementor, and WooCommerce). It scans and protects files without generating false alarms on standard development packages.
+
 = Can it clean a hacked WordPress site? =
 Yes. The built-in malware scanner detects backdoors, obfuscated code, web shells, and known malware patterns. You can remove detected threats with a single click. For fully automated, zero-touch cleanup and AST tokenization, upgrade to Nexura Security Pro.
 
@@ -323,6 +329,14 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 ---
 
 == Changelog ==
+
+= 1.0.23 =
+* **Feature / UX Enhancement:** Improved Scan Results table to clearly display affected file and database paths, line numbers, and threat types for free users, allowing seamless manual investigation and remediation.
+* **Enhancement:** Enhanced false-positive filtering for safe vendor packages (Freemius SDK, Composer, Squizlabs) to prevent false alerts on clean vendor files.
+* **Enhancement:** Hardened root script detection to only flag `.sh`, `.phar`, and `.py` scripts when placed directly in the WordPress root directory (`ABSPATH`).
+* **Bug Fix:** Fixed defacement regex pattern to prevent false alarms on innocent code comments containing "owned by".
+* **Security Hardening:** Updated Vulnerability Scanner PHP checks to flag End-of-Life PHP versions (< 8.0) and warn against unpatched vulnerabilities (CVE-2024-4577).
+* **Compliance:** Ensured 100% adherence to WordPress.org Plugin Guidelines for clean admin UI and unobtrusive upgrade options.
 
 = 1.0.22 =
 * **Critical Fix:** Fixed a fatal error ("There has been a critical error on this website") on sites with an active trial or license running the WordPress.org version, caused by loading Pro files that are not included in the free build.
@@ -503,8 +517,8 @@ For a full structured changelog, see [CHANGELOG.md](https://github.com/nexurasec
 
 == Upgrade Notice ==
 
-= 1.0.22 =
-Critical fix for fatal errors on WordPress.org builds when running an active trial or license. Strongly recommended for all users.
+= 1.0.23 =
+Recommended update: Enhances malware scanner accuracy, eliminates false alarms on safe vendor libraries, displays detected file paths and line numbers, and updates PHP EOL vulnerability checks.
 
 = 1.0.10 =
 Major security hardening release. Adds Ghost Admin Protection, WAF encoded payload decoding, Wp2shell zero-day blocking, SSL MITM fix, and Open Redirect protection. **Strongly recommended for all users.**

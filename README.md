@@ -5,8 +5,8 @@
   <br><br>
   <img src="https://img.shields.io/badge/Requires_WP-5.8+-blue.svg?style=for-the-badge" alt="Requires WP">
   <img src="https://img.shields.io/badge/Requires_PHP-7.4+-blue.svg?style=for-the-badge" alt="Requires PHP">
-  <img src="https://img.shields.io/badge/Version-1.0.22-orange.svg?style=for-the-badge" alt="Version">
-  <img src="https://img.shields.io/badge/Tested_up_to-7.0.1-green.svg?style=for-the-badge" alt="Tested WP">
+  <img src="https://img.shields.io/badge/Version-1.0.23-orange.svg?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Tested_up_to-7.1-green.svg?style=for-the-badge" alt="Tested WP">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv2-blue.svg?style=for-the-badge" alt="License"></a>
   <br>
   <a href="https://github.com/nexurasecurity/nexura-security/actions/workflows/ci.yml"><img src="https://github.com/nexurasecurity/nexura-security/actions/workflows/ci.yml/badge.svg" alt="CI"></a>

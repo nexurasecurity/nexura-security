@@ -61,6 +61,7 @@ class DB_Backup {
     public function rest_init( \WP_REST_Request $request ) {
         global $wpdb;
         if ( function_exists( 'set_time_limit' ) ) {
+            // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Database backup operations require extending execution time.
             @set_time_limit( 120 );
         }
 
@@ -103,9 +104,9 @@ class DB_Backup {
         $all_tables = $wpdb->get_results( 'SHOW TABLES', ARRAY_N );
         $tables     = [];
         foreach ( $all_tables as $t ) {
-            $tname = preg_replace( '/[^a-zA-Z0-9_]/', '', $t[0] );
+            $tname = esc_sql( preg_replace( '/[^a-zA-Z0-9_]/', '', $t[0] ) );
             if ( strpos( $tname, $wpdb->prefix ) === 0 ) {
-                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+                // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter
                 $count    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM `{$tname}`" );
                 $tables[] = [ 'name' => $tname, 'rows' => $count ];
             }
@@ -140,6 +141,7 @@ class DB_Backup {
     public function rest_step( \WP_REST_Request $request ) {
         global $wpdb;
         if ( function_exists( 'set_time_limit' ) ) {
+            // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Database backup operations require extending execution time.
             @set_time_limit( 60 );
         }
 
@@ -174,7 +176,7 @@ class DB_Backup {
         $table_name = $tables[ $table_index ]['name'];
 
         if ( $offset === 0 ) {
-            // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery
+            // phpcs:ignore PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange
             $create = $wpdb->get_row( "SHOW CREATE TABLE `{$table_name}`", ARRAY_N );
             if ( ! empty( $create[1] ) ) {
                 $ddl  = "-- Table: `{$table_name}` ({$tables[$table_index]['rows']} rows)\n";
@@ -184,11 +186,12 @@ class DB_Backup {
             }
         }
 
-        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+        // phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $rows = $wpdb->get_results(
             $wpdb->prepare( "SELECT * FROM `{$table_name}` LIMIT %d OFFSET %d", self::CHUNK_SIZE, $offset ),
             ARRAY_A
         );
+        // phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, PluginCheck.Security.DirectDB.UnescapedDBParameter, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
         $rows_written = 0;
         if ( ! empty( $rows ) ) {
@@ -361,6 +364,7 @@ class DB_Backup {
         global $wpdb;
 
         if ( function_exists( 'set_time_limit' ) ) {
+            // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Database backup operations require extending execution time.
             @set_time_limit( 600 );
         }
         if ( function_exists( 'wp_raise_memory_limit' ) ) {

@@ -477,6 +477,7 @@ class Login_Protection {
                 if ( $attempts !== false && $attempts > 0 ) {
                     $remaining = $this->max_attempts - $attempts;
                     if ( $remaining > 0 ) {
+                        /* translators: %d: Number of remaining attempts */
                         $warning_msg = sprintf( __( 'Warning: You have %d attempts remaining before your IP is temporarily blocked.', 'nexura-security' ), $remaining );
                         return $error_string . '<br><br><strong>' . esc_html( $warning_msg ) . '</strong>';
                     }
@@ -507,8 +508,8 @@ class Login_Protection {
             $lockout_minutes = 24 * 60;
         }
 
-        /* translators: %1$d: number of minutes, %2$d: current strike level */
         $blocked_msg = sprintf(
+            /* translators: 1: number of minutes, 2: current strike level */
             esc_html__( 'Your IP has been temporarily blocked for %1$d minutes due to too many failed login attempts (Strike %2$d).', 'nexura-security' ),
             $lockout_minutes,
             $strike
@@ -543,7 +544,7 @@ class Login_Protection {
             return;
         }
 
-        wp_register_script( 'nexura-lockout-js', false );
+        wp_register_script( 'nexura-lockout-js', false, array(), NEXURA_VERSION, true );
         wp_enqueue_script( 'nexura-lockout-js' );
 
         $script = "

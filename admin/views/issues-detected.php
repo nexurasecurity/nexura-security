@@ -14,7 +14,16 @@ if ( ! defined( 'ABSPATH' ) ) {
             </div>
         </div>
         
-        <?php do_action( 'nexura_issues_detected_header_actions' ); ?>
+        <?php if ( ! ( function_exists( 'nexura_is_pro' ) && nexura_is_pro() ) ) : ?>
+            <div>
+                <a href="<?php echo esc_url( function_exists( 'nsp_fs' ) ? nsp_fs()->get_upgrade_url() : admin_url( 'admin.php?page=nexura-pricing' ) ); ?>" class="button button-primary" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; box-shadow: 0 2px 4px rgba(37,99,235,0.2); display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; font-weight: 600; font-size: 13px; text-decoration: none; border-radius: 4px; color: #fff;">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    <?php esc_html_e( 'Unlock 1-Click Auto-Clean (Pro)', 'nexura-security' ); ?>
+                </a>
+            </div>
+        <?php else : ?>
+            <?php do_action( 'nexura_issues_detected_header_actions' ); ?>
+        <?php endif; ?>
     </div>
     
 

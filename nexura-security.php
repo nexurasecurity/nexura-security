@@ -4,7 +4,7 @@
  * Plugin Name: Nexura Security
  * Plugin URI: https://wordpress.org/plugins/nexura-security/
  * Description: Enterprise-level WordPress security plugin with malware scanning, file integrity monitoring, vulnerability auditing, and Google Safe Browsing integration.
- * Version: 1.0.22
+ * Version: 1.0.23
  * Author: Nexura Security
  * Author URI: https://profiles.wordpress.org/nexurasecurity/
  * License: GPL-2.0+
@@ -61,6 +61,7 @@ add_action( 'admin_init', function () {
     }
     if ( is_plugin_active( 'nexura-security-pro/nexura-security-pro.php' ) ) {
         deactivate_plugins( 'nexura-security-pro/nexura-security-pro.php' );
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Reading WordPress core activation query argument.
         if ( isset( $_GET['activate'] ) ) {
             unset($_GET['activate']);
             // Prevent "plugin activated" notice overriding ours
@@ -73,7 +74,7 @@ add_action( 'admin_init', function () {
 // phpcs:enable
 // Define Constants
 if ( !defined( 'NEXURA_VERSION' ) ) {
-    define( 'NEXURA_VERSION', '1.0.22' );
+    define( 'NEXURA_VERSION', '1.0.23' );
 }
 if ( !defined( 'NEXURA_PLUGIN_DIR' ) ) {
     define( 'NEXURA_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );

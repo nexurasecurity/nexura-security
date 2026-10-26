@@ -472,15 +472,23 @@ jQuery(document).ready(function($) {
             var items = data.items || data; // Fallback just in case
             var html = '<table class="wp-list-table widefat fixed striped">';
             
+            var isPro = (typeof NEXURA_PRO_ajax !== 'undefined');
             var headers = [];
+
+            // In Free version, display File Path & Line directly so users can investigate threats
+            if (!isPro) {
+                headers.push('<th style="width: 38%;">File / Database Path</th>');
+                headers.push('<th style="width: 10%;">Line</th>');
+            }
+
             headers.push('<th>Detected Pattern</th>');
             headers.push('<th>Risk</th>');
             
             // Trigger hook so PRO can add File Path, Line, Action columns
             $(document).trigger('nexura_issues_table_headers', [headers]);
 
-            if (typeof NEXURA_PRO_ajax === 'undefined') {
-                headers.push('<th>Action</th>');
+            if (!isPro) {
+                headers.push('<th style="width: 170px;">Action</th>');
             }
             
             html += '<thead><tr>' + headers.join('') + '</tr></thead>';
@@ -490,12 +498,9 @@ jQuery(document).ready(function($) {
             
             $.each(items, function(index, item) {
                 var absoluteIndex = (currentPage - 1) * 20 + index;
-                var riskClass = 'nexura-risk-' + item.risk_score.toLowerCase();
+                var riskScore = item.risk_score ? item.risk_score : 'Medium';
+                var riskClass = 'nexura-risk-' + riskScore.toLowerCase();
                 var lineDisplay = (item.line_number && item.line_number !== '0') ? 'Line ' + item.line_number : 'N/A';
-                
-                var filePathDisplay = '<code>' + item.file_path + '</code>';
-                var lineDisplay = (item.line_number && item.line_number !== '0') ? 'Line ' + item.line_number : 'N/A';
-
 
                 var malwareName = item.pattern || '';
                 
@@ -525,15 +530,26 @@ jQuery(document).ready(function($) {
                 }
 
                 var rowData = [];
+
+                // Display file path and line for Free users (XSS-safe)
+                if (!isPro) {
+                    var safePath = $('<div>').text(item.file_path).html();
+                    var filePathDisplay = '<code style="word-break: break-all; font-size: 11px; background: rgba(0,0,0,0.04); padding: 2px 4px; border-radius: 3px;" title="' + safePath + '">' + safePath + '</code>';
+                    rowData.push('<td>' + filePathDisplay + '</td>');
+                    rowData.push('<td><span style="font-size: 12px; color: var(--nexura-text-muted);">' + lineDisplay + '</span></td>');
+                }
+
                 rowData.push('<td><strong>' + malwareName + '</strong></td>');
-                rowData.push('<td class="' + riskClass + '">' + item.risk_score + '</td>');
+                rowData.push('<td class="' + riskClass + '">' + riskScore + '</td>');
 
                 // Trigger hook so PRO can add File Path, Line, Action columns
                 $(document).trigger('nexura_issues_table_row', [rowData, item]);
                 
-                // If PRO is not active, add only Whitelist Action (no File Path for free users)
-                if (typeof NEXURA_PRO_ajax === 'undefined') {
-                    rowData.push('<td><button type="button" class="button button-small nexura-whitelist-file" data-file="' + item.file_path + '" style="color: #008a20; border-color: #008a20;">Whitelist</button></td>');
+                // If PRO is not active, provide clean Whitelist action per WP.org Guidelines (no spammy per-row upsell buttons)
+                if (!isPro) {
+                    var safeFilePathAttr = $('<div>').text(item.file_path).html();
+                    var actions = '<td><button type="button" class="button button-small nexura-whitelist-file" data-file="' + safeFilePathAttr + '" style="color: #008a20; border-color: #008a20;">Whitelist</button></td>';
+                    rowData.push(actions);
                 }
 
                 html += '<tr>' + rowData.join('') + '</tr>';

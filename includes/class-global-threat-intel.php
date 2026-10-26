@@ -210,7 +210,7 @@ class Global_Threat_Intel {
         }
 
         // If verified, allow
-        if ( isset( $_COOKIE['NEXURA_verified_ip'] ) && hash_equals( hash( 'sha256', $ip . wp_salt() ), $_COOKIE['NEXURA_verified_ip'] ) ) {
+        if ( isset( $_COOKIE['NEXURA_verified_ip'] ) && hash_equals( hash( 'sha256', $ip . wp_salt() ), sanitize_text_field( wp_unslash( $_COOKIE['NEXURA_verified_ip'] ) ) ) ) {
             return;
         }
 

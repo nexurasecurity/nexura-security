@@ -64,6 +64,7 @@ class REST_Security_Free {
      * Block user enumeration via ?author=N query parameter.
      */
     public function block_author_enumeration() {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Public query parameter inspection to block user enumeration attacks.
         if ( ! is_admin() && isset( $_GET['author'] ) && ! current_user_can( 'list_users' ) ) {
             wp_die(
                 esc_html__( 'Author enumeration is disabled for security reasons.', 'nexura-security' ),

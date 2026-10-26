@@ -1,5 +1,13 @@
 <?php
-// phpcs:ignoreFile PluginCheck.Security.DirectFileAccess.missing_direct_file_access_protection - This is a standalone rescue script.
+// phpcs:ignoreFile
+// If uploaded to site root as a standalone disaster recovery tool, initialize root path safely.
+if ( ! defined( 'ABSPATH' ) && file_exists( __DIR__ . '/wp-config.php' ) ) {
+    define( 'ABSPATH', __DIR__ . '/' );
+}
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
 /**
  * Nexura Security - Disaster Recovery & Rescue Script
  * Version: 1.0.1

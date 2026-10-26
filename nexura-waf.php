@@ -7,8 +7,16 @@
 
 // phpcs:ignoreFile missing_direct_file_access_protection, PluginCheck.Files.DirectAccess, WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedConstantFound
 
-if ( basename( __FILE__ ) === basename( $_SERVER['SCRIPT_FILENAME'] ?? '' ) ) {
-    die( 'Direct access not permitted.' );
+// If running via auto_prepend_file or bootstrap before WordPress core loads, define ABSPATH safely.
+if ( ! defined( 'ABSPATH' ) && basename( __FILE__ ) !== basename( $_SERVER['SCRIPT_FILENAME'] ?? '' ) ) {
+    $nexura_root = dirname( dirname( dirname( __DIR__ ) ) ) . DIRECTORY_SEPARATOR;
+    if ( file_exists( $nexura_root . 'wp-config.php' ) || file_exists( dirname( $nexura_root ) . DIRECTORY_SEPARATOR . 'wp-config.php' ) ) {
+        define( 'ABSPATH', $nexura_root );
+    }
+}
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
 }
 
 if ( ! defined( 'NEXURA_WAF_LOG_DIR' ) ) {

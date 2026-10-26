@@ -97,7 +97,7 @@ return [
             'description' => 'chr() based string obfuscation'
         ],
         'php_defacement' => [
-            'pattern'     => '/(hacked\sby|defaced\sby|owned\sby)/i',
+            'pattern'     => '/(hacked\s+by|defaced\s+by|pwned\s+by|owned\s+by\s+(?:root|team|hacker|cbg|anon|cyber))/i',
             'risk'        => 'High',
             'description' => 'Common defacement signature'
         ],

@@ -3,6 +3,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+
+// phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
 global $wpdb;
 
 // Handle Unblock Action
@@ -19,6 +21,7 @@ if ( isset( $_POST['unblock_ip'] ) && isset( $_POST['_wpnonce'] ) ) {
 
 // Fetch all active lockouts from wp_options
 // We query for the expiry transient keys since they represent active lockouts
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Transient wildcard lookup requires direct query without caching.
 $results = $wpdb->get_results(
     "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name LIKE '_transient_NEXURA_lockout_expiry_%'"
 );
@@ -75,8 +78,10 @@ if ( $results ) {
                     $minutes = floor( ( $remaining % 3600 ) / 60 );
                     
                     if ( $hours > 0 ) {
-                        $time_string = sprintf( __( '%dh %dm', 'nexura-security' ), $hours, $minutes );
+                        /* translators: 1: Hours, 2: Minutes */
+                        $time_string = sprintf( __( '%1$dh %2$dm', 'nexura-security' ), $hours, $minutes );
                     } else {
+                        /* translators: %d: Minutes */
                         $time_string = sprintf( __( '%dm', 'nexura-security' ), $minutes );
                     }
                 ?>

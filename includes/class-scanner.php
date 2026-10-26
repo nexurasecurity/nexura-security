@@ -409,9 +409,17 @@ class Scanner {
                         $is_whitelisted = true;
                     }
                     
-                    // Skip minified JS and CSS files to prevent generic obfuscation false positives
-                    if ( strpos( $file->getFilename(), '.min.js' ) !== false || strpos( $file->getFilename(), '.min.css' ) !== false ) {
+                    // Skip minified CSS files and standard core/plugin vendor JS to prevent false positives,
+                    // but scan minified JS if uploaded to uploads or root directory (common Magecart/dropper disguise)
+                    if ( strpos( $file->getFilename(), '.min.css' ) !== false ) {
                         $is_whitelisted = true;
+                    } elseif ( strpos( $file->getFilename(), '.min.js' ) !== false ) {
+                        $norm_test = str_replace( '\\', '/', $pathname );
+                        if ( strpos( $norm_test, '/wp-includes/' ) === false && strpos( $norm_test, '/wp-content/plugins/' ) === false ) {
+                            $is_whitelisted = false;
+                        } else {
+                            $is_whitelisted = true;
+                        }
                     }
 
                     if ( $is_whitelisted ) {
@@ -788,7 +796,9 @@ class Scanner {
                             $fp_patterns = [
                                 'eval_execution',
                                 'dynamic_variable_function',
-                                'string_concatenation_obfuscation'
+                                'string_concatenation_obfuscation',
+                                'ghost_threat_detected',
+                                'ghost_malware_detected'
                             ];
                             
                             foreach ( $findings as $finding ) {
@@ -1054,13 +1064,20 @@ class Scanner {
             return $findings; // File is safe/ignored by user
         }
 
-        // Skip very large files to prevent execution timeouts and high CPU usage.
-        // Files larger than 250KB are typically vendor libraries or compiled scripts.
-        if ( filesize( $file_path ) > 250 * 1024 ) { 
-            return $findings;
+        $file_size = filesize( $file_path );
+        // Skip files over 1MB to prevent execution timeouts, but guard against padded PHP malware
+        if ( $file_size > 1024 * 1024 ) {
+            $ext_check = strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) );
+            if ( $ext_check === 'php' && $file_size <= 3 * 1024 * 1024 ) {
+                $head = file_get_contents( $file_path, false, null, 0, 131072 );
+                $tail = file_get_contents( $file_path, false, null, $file_size - 65536, 65536 );
+                $content = ( $head !== false ? $head : '' ) . "\n" . ( $tail !== false ? $tail : '' );
+            } else {
+                return $findings;
+            }
+        } else {
+            $content = file_get_contents( $file_path );
         }
-
-        $content = file_get_contents( $file_path );
         
         if ( $content === false ) {
             return $findings;
@@ -1112,7 +1129,8 @@ class Scanner {
         }
 
         // 1b. Root script-type files (.py, .sh, .pl, .cgi, .phar) — always suspicious in WordPress root
-        if ( in_array( $file_ext_check, [ 'py', 'sh', 'pl', 'cgi', 'phar' ], true ) ) {
+        $is_in_root = ( dirname( wp_normalize_path( $file_path ) ) === rtrim( wp_normalize_path( ABSPATH ), '/' ) );
+        if ( $is_in_root && in_array( $file_ext_check, [ 'py', 'sh', 'pl', 'cgi', 'phar' ], true ) ) {
             $script_labels = [
                 'py'   => 'Python script — possible CGI web shell or dropper',
                 'sh'   => 'Bash/shell script — critical server persistence indicator',
@@ -1507,7 +1525,13 @@ class Scanner {
              stripos( $content, 'wp-vcd' ) === false &&
              stripos( $content, 'auto-created-admin' ) === false &&
              stripos( $content, '<!ENTITY' ) === false &&
-             stripos( $content, 'chr(' ) === false ) {
+             stripos( $content, 'chr(' ) === false &&
+             stripos( $content, 'php://input' ) === false &&
+             stripos( $content, 'getallheaders' ) === false &&
+             stripos( $content, 'hex2bin' ) === false &&
+             stripos( $content, 'gzinflate' ) === false &&
+             stripos( $content, 'str_rot13' ) === false &&
+             stripos( $content, 'base64_decode' ) === false ) {
             return $findings;
         }
 
@@ -1836,6 +1860,10 @@ class Scanner {
         $file_path = wp_normalize_path( $file_path );
         
         $safe_vendors = [
+            '/freemius/',
+            '/vendor/freemius/',
+            '/vendor/squizlabs/',
+            '/vendor/composer/',
             '/elementor/vendor_prefixed/',
             '/elementor/vendor/',
             '/elementor-pro/vendor/',

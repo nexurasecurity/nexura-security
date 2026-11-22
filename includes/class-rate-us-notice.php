@@ -23,7 +23,7 @@ class Rate_Us_Notice {
     public function __construct() {
         add_action( 'admin_notices', [ $this, 'show_notice' ] );
         add_action( 'wp_ajax_nexura_dismiss_rate_notice', [ $this, 'ajax_dismiss' ] );
-        add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_dismiss_script' ] );
+        add_action( 'admin_footer', [ $this, 'enqueue_dismiss_script' ] );
     }
 
     /**

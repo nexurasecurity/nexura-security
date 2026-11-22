@@ -3,7 +3,7 @@ Contributors: nexurasecurity, freemius
 Tags: security, malware scanner, malware removal, firewall, two factor authentication
 Requires at least: 5.8
 Tested up to: 7.1
-Stable tag: 1.0.23
+Stable tag: 1.0.24
 Requires PHP: 7.4
 License: GPLv2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
@@ -203,6 +203,18 @@ To provide comprehensive security, Nexura Security connects to several trusted t
 *Retention:* Depends on your chosen AI provider and your API key configuration (enterprise API endpoints typically do not train on user data).
 *Links:* [OpenAI Privacy](https://openai.com/policies/privacy-policy) | [Anthropic Privacy](https://www.anthropic.com/legal/privacy) | [Google Privacy](https://policies.google.com/privacy) | [Cloudflare Privacy](https://www.cloudflare.com/privacypolicy/)
 
+**11. Cloudflare Published IP Ranges (`cloudflare.com/ips-v4`, `ips-v6`)**
+*Used for:* Verifying trusted Cloudflare proxy IP ranges so the firewall and login protection accurately resolve visitor IPs behind Cloudflare.
+*Data sent:* Standard HTTP GET request (no personal or site data is sent).
+*When:* Synced periodically via WP-Cron.
+*Links:* [Cloudflare Privacy Policy](https://www.cloudflare.com/privacypolicy/)
+
+**12. Google Time Header Sync (`google.com`)**
+*Used for:* Checking HTTP `Date` header offset for accurate TOTP Two-Factor Authentication time synchronization on servers with clock drift.
+*Data sent:* Lightweight HTTP HEAD request (no user data is sent).
+*When:* Only when NTP Time Sync is enabled in 2FA settings.
+*Links:* [Google Privacy Policy](https://policies.google.com/privacy)
+
 ---
 
 = 📜 Privacy Policy =
@@ -329,6 +341,17 @@ Yes. There are no restrictions on the number of sites you can protect with the f
 ---
 
 == Changelog ==
+
+= 1.0.24 =
+* **Security Hardening:** Eliminated dynamic PHP file loading in the malware scanner in favor of inline heuristic scanning, and added strict option allowlist/denylist sanitization to JSON settings import.
+* **Security Hardening:** Hardened admin UI against Stored/DOM XSS across scan results, logs, active monitoring, diff viewer, dashboard GeoIP, WAF analytics, and AI chat.
+* **Security Hardening:** Added strict `ABSPATH` boundary checks, core option deletion protection, and config file allowlists in Reinfection Remediator and File Diff Viewer; hardened `unserialize()` with `allowed_classes => false`.
+* **Security Hardening:** Verified Cloudflare CIDR ranges before trusting `CF-Connecting-IP` headers to prevent IP spoofing, switched webhook delivery to `wp_safe_remote_post()`, added `Secure`/`HttpOnly`/`SameSite` cookie flags, and added rate limiting to the visitor tracker endpoint.
+* **Critical Bug Fix:** Fixed a pre-boot WSOD issue in the legacy WAF fallback path (`vendor/nexura-sys/src/nexura-waf.php`) for sites upgrading from older versions.
+* **Bug Fix:** Fixed Instant Hardening toggles failing due to `sanitize_key()` lowercasing, fixed Ghost Admin Protection strict integer/string mismatch that could demote newly created admins, and fixed 2FA 403 blocks when Custom Login URL is active.
+* **Bug Fix:** Fixed Fatal Error drop-in theme reset edge case, broken class namespaces in Pro file manager/auto-fixer/logger, hardcoded plugin directory path in AI Auto-Fixer, broken DB IDS menu slug, Security Score option checks, Cloudflare IP sync path mismatch, PHP 8.x cron array warnings, and complete cron cleanup on deactivation.
+* **AI & Scanner Updates:** Updated retired/deprecated AI models (Claude, Gemini, OpenAI, and Cloudflare Workers AI) with automatic migration for existing saved settings; updated PHP EOL vulnerability checks for 2026 standards (PHP 8.1/8.2 EOL); fixed WAF learning mode handling and reduced SQLi comment false positives.
+* **Compliance:** Updated Third-Party Services disclosures in `readme.txt` and ensured Reinfection Guard Free-tier consistency.
 
 = 1.0.23 =
 * **Feature / UX Enhancement:** Improved Scan Results table to clearly display affected file and database paths, line numbers, and threat types for free users, allowing seamless manual investigation and remediation.
@@ -516,6 +539,9 @@ For a full structured changelog, see [CHANGELOG.md](https://github.com/nexurasec
 ---
 
 == Upgrade Notice ==
+
+= 1.0.24 =
+Important security and stability update: Hardens admin UI and file remediation, fixes Instant Hardening toggles, Ghost Admin detection, Custom Login + 2FA compatibility, WAF learning mode, and updates AI models and 2026 PHP EOL checks. Recommended for all users.
 
 = 1.0.23 =
 Recommended update: Enhances malware scanner accuracy, eliminates false alarms on safe vendor libraries, displays detected file paths and line numbers, and updates PHP EOL vulnerability checks.

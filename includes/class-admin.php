@@ -91,7 +91,8 @@ class Admin {
             'NEXURA_add_security_headers',
         ];
 
-        $option_key = isset( $_POST['option_key'] ) ? sanitize_key( wp_unslash( $_POST['option_key'] ) ) : '';
+        // Preserve exact case before strict allowlist comparison (sanitize_key() lowercases NEXURA_*)
+        $option_key = isset( $_POST['option_key'] ) ? sanitize_text_field( wp_unslash( $_POST['option_key'] ) ) : '';
         $value      = isset( $_POST['value'] ) ? (int) $_POST['value'] : 0;
 
         if ( ! in_array( $option_key, $allowed_keys, true ) ) {
@@ -349,9 +350,38 @@ class Admin {
                 wp_die( esc_html__( 'Invalid settings file.', 'nexura-security' ) );
             }
 
+            // Block internal/runtime/sensitive options from ever being overwritten via JSON import.
+            $blocked_import_keys = [
+                'NEXURA_active_ghost_engine',
+                'NEXURA_active_signatures',
+                'NEXURA_pro_license_key',
+                'NEXURA_license_key',
+                'NEXURA_reinfection_result',
+                'NEXURA_scan_issues',
+                'NEXURA_last_completed_scan_time',
+                'NEXURA_last_virus_alert_email',
+                'NEXURA_ai_daily_usage',
+                'NEXURA_ai_usage_date',
+            ];
+
+            $sanitize_recursive = function( $val ) use ( &$sanitize_recursive ) {
+                if ( is_array( $val ) ) {
+                    $clean = [];
+                    foreach ( $val as $k => $v ) {
+                        $clean[ sanitize_text_field( (string) $k ) ] = $sanitize_recursive( $v );
+                    }
+                    return $clean;
+                }
+                if ( is_bool( $val ) || is_int( $val ) || is_float( $val ) ) {
+                    return $val;
+                }
+                return sanitize_textarea_field( (string) $val );
+            };
+
             foreach ( $import_data as $key => $value ) {
-                if ( strpos( $key, 'NEXURA_' ) === 0 ) {
-                    update_option( sanitize_text_field( $key ), $value );
+                $clean_key = preg_replace( '/[^A-Za-z0-9_]/', '', (string) $key );
+                if ( strpos( $clean_key, 'NEXURA_' ) === 0 && ! in_array( $clean_key, $blocked_import_keys, true ) ) {
+                    update_option( $clean_key, $sanitize_recursive( $value ) );
                 }
             }
 
@@ -839,7 +869,7 @@ class Admin {
 
         wp_enqueue_style( 'nexura-admin-style', NEXURA_PLUGIN_URL . 'admin/css/admin-style.css', [], NEXURA_VERSION );
         wp_enqueue_style( 'nexura-pro-upgrade-modal', NEXURA_PLUGIN_URL . 'admin/css/pro-upgrade-modal.css', [ 'nexura-admin-style' ], NEXURA_VERSION );
-        wp_enqueue_script( 'nexura-admin-script', NEXURA_PLUGIN_URL . 'admin/js/admin-script.js', [ 'jquery', 'nexura-chartjs', 'nexura-qrcode' ], time(), true );
+        wp_enqueue_script( 'nexura-admin-script', NEXURA_PLUGIN_URL . 'admin/js/admin-script.js', [ 'jquery', 'nexura-chartjs', 'nexura-qrcode' ], NEXURA_VERSION, true );
         wp_enqueue_script( 'nexura-malware-scan-cpu', NEXURA_PLUGIN_URL . 'admin/js/malware-scan-cpu.js', [], NEXURA_VERSION, true );
 
         // Reinfection Guard specific assets
@@ -857,25 +887,8 @@ class Admin {
             $is_pro      = function_exists( 'nexura_is_pro' ) && nexura_is_pro();
             $upgrade_url = function_exists( 'nsp_fs' ) ? nsp_fs()->get_upgrade_url() : admin_url( 'admin.php?page=nexura-pricing' );
 
-            if ( ! $is_pro && is_array( $last_report ) ) {
-                if ( ! empty( $last_report['evidence'] ) && is_array( $last_report['evidence'] ) ) {
-                    foreach ( $last_report['evidence'] as &$ev ) {
-                        unset( $ev['path'], $ev['evidence'], $ev['hook'], $ev['option'] );
-                    }
-                }
-                if ( ! empty( $last_report['graph_data']['nodes'] ) && is_array( $last_report['graph_data']['nodes'] ) ) {
-                    foreach ( $last_report['graph_data']['nodes'] as &$node ) {
-                        if ( isset( $node['group'] ) && $node['group'] !== 'malware' ) {
-                            $node['label'] = ( isset( $node['group'] ) ? $node['group'] : 'persistence' ) . ' [PRO]';
-                            $node['desc']  = 'Upgrade to Nexura Pro to view full file path and reverse-trace evidence.';
-                        }
-                    }
-                }
-                if ( ! empty( $last_report['target_file'] ) && $last_report['target_file'] !== 'Site-Wide Audit' ) {
-                    $last_report['target_file'] = 'Protected Path (PRO)';
-                }
-            }
-
+            // Per WordPress.org Guideline 5 and matching Rest_Controller::mask_reinfection_report_for_free(),
+            // keep detected evidence paths visible for transparency in Free mode.
             wp_localize_script( 'nexura-reinfection-guard-script', 'NEXURA_rg', [
                 'rest_url'    => esc_url_raw( rest_url() ),
                 'nonce'       => wp_create_nonce( 'wp_rest' ),

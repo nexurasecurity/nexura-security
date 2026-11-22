@@ -75,8 +75,10 @@ class Reinfection_Remediator {
 
         if ( $result && ! is_wp_error( $result ) ) {
             // If the file was in the uploads directory, add .htaccess protection
-            $upload_dir = wp_upload_dir();
-            if ( strpos( realpath( dirname( $path ) ), realpath( $upload_dir['basedir'] ) ) === 0 ) {
+            $upload_dir  = wp_upload_dir();
+            $real_parent = realpath( dirname( $path ) );
+            $real_upload = realpath( $upload_dir['basedir'] );
+            if ( $real_parent && $real_upload && strpos( trailingslashit( wp_normalize_path( $real_parent ) ), trailingslashit( wp_normalize_path( $real_upload ) ) ) === 0 ) {
                 $this->protect_uploads_dir( dirname( $path ) );
             }
             return [ 'success' => true, 'message' => 'File successfully quarantined.' ];
@@ -120,6 +122,35 @@ class Reinfection_Remediator {
         if ( empty( $option_name ) ) {
             return [ 'success' => false, 'message' => 'Invalid option name.' ];
         }
+
+        // Protect critical WordPress core options from accidental or malicious deletion
+        $protected_options = [
+            'siteurl', 'home', 'blogname', 'blogdescription', 'users_can_register',
+            'admin_email', 'start_of_week', 'use_balanceTags', 'use_smilies', 'require_name_email',
+            'comments_notify', 'posts_per_rss', 'rss_use_excerpt', 'mailserver_url', 'mailserver_login',
+            'mailserver_pass', 'mailserver_port', 'default_category', 'default_comment_status',
+            'default_ping_status', 'default_pingback_flag', 'posts_per_page', 'date_format', 'time_format',
+            'links_updated_date_format', 'comment_moderation', 'moderation_notify', 'permalink_structure',
+            'rewrite_rules', 'hack_file', 'blog_charset', 'moderation_keys', 'active_plugins',
+            'category_base', 'ping_sites', 'comment_max_links', 'gmt_offset', 'default_email_category',
+            'recently_edited', 'template', 'stylesheet', 'comment_registration', 'html_type',
+            'default_role', 'db_version', 'uploads_use_yearmonth_folders', 'upload_path', 'blog_public',
+            'default_link_category', 'show_on_front', 'tag_base', 'show_avatars', 'avatar_rating',
+            'upload_url_path', 'thumbnail_size_w', 'thumbnail_size_h', 'thumbnail_crop',
+            'medium_size_w', 'medium_size_h', 'avatar_default', 'large_size_w', 'large_size_h',
+            'image_default_link_type', 'image_default_size', 'image_default_align', 'close_comments_for_old_posts',
+            'close_comments_days_old', 'thread_comments', 'thread_comments_depth', 'page_comments',
+            'comments_per_page', 'default_comments_page', 'comment_order', 'sticky_posts', 'widget_categories',
+            'widget_text', 'widget_rss', 'uninstall_plugins', 'timezone_string', 'page_for_posts',
+            'page_on_front', 'default_post_format', 'cron', 'WPLANG', 'recovery_mode_email_last_sent',
+        ];
+        global $wpdb;
+        $protected_options[] = $wpdb->prefix . 'user_roles';
+
+        if ( in_array( $option_name, $protected_options, true ) ) {
+            return [ 'success' => false, 'message' => 'Cannot delete protected WordPress core option.' ];
+        }
+
         delete_option( $option_name );
         return [ 'success' => true, 'message' => "Database option '{$option_name}' removed." ];
     }
@@ -128,17 +159,42 @@ class Reinfection_Remediator {
      * Clean config file (basic auto_prepend_file removal).
      */
     private function clean_config( $path ) {
-        if ( ! file_exists( $path ) ) {
+        if ( empty( $path ) || ! file_exists( $path ) ) {
             return [ 'success' => false, 'message' => 'Config file not found.' ];
         }
 
-        $content = file_get_contents( $path );
-        // Basic naive removal of php_value auto_prepend_file line
-        $clean_content = preg_replace( '/php_value\s+auto_prepend_file\s+[^\r\n]+/i', '', $content );
-        $clean_content = preg_replace( '/auto_prepend_file\s*=\s*[^\r\n]+/i', '', $clean_content );
+        // Strict boundary and filename allowlist check
+        $real_path    = realpath( $path );
+        $real_abspath = realpath( ABSPATH );
+        if ( ! $real_path || ! $real_abspath ) {
+            return [ 'success' => false, 'message' => 'Invalid config file path.' ];
+        }
+        $norm_path    = wp_normalize_path( $real_path );
+        $norm_abspath = trailingslashit( wp_normalize_path( $real_abspath ) );
+        if ( strpos( $norm_path, $norm_abspath ) !== 0 ) {
+            return [ 'success' => false, 'message' => 'Config file outside WordPress directory.' ];
+        }
+
+        $allowed_basenames = [ '.htaccess', '.user.ini', 'php.ini' ];
+        if ( ! in_array( strtolower( basename( $real_path ) ), $allowed_basenames, true ) ) {
+            return [ 'success' => false, 'message' => 'Automatic config cleanup is only permitted on .htaccess, .user.ini, or php.ini.' ];
+        }
+
+        $content = file_get_contents( $real_path );
+        // Remove malicious auto_prepend_file directives while preserving Nexura's own WAF bootstrap
+        $clean_content = preg_replace_callback(
+            '/^(?:php_value\s+auto_prepend_file\s+[^\r\n]+|auto_prepend_file\s*=\s*[^\r\n]+)$/im',
+            function ( $matches ) {
+                if ( stripos( $matches[0], 'nexura-waf' ) !== false ) {
+                    return $matches[0];
+                }
+                return '';
+            },
+            $content
+        );
 
         if ( $content !== $clean_content ) {
-            if ( file_put_contents( $path, $clean_content ) ) { // phpcs:ignore WordPress.WP.AlternativeFunctions
+            if ( file_put_contents( $real_path, $clean_content ) !== false ) { // phpcs:ignore WordPress.WP.AlternativeFunctions
                 return [ 'success' => true, 'message' => 'Config file cleaned.' ];
             }
             return [ 'success' => false, 'message' => 'Failed to write cleaned config.' ];

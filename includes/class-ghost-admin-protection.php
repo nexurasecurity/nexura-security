@@ -52,9 +52,10 @@ class Ghost_Admin_Protection {
             }
         } else {
             // An actual admin created this user, so it's safe. Add to whitelist.
-            $known_admins = get_option( 'nexura_known_safe_admins', [] );
-            if ( ! in_array( $user_id, $known_admins, true ) ) {
-                $known_admins[] = $user_id;
+            $known_admins = array_map( 'intval', (array) get_option( 'nexura_known_safe_admins', [] ) );
+            $int_user_id  = (int) $user_id;
+            if ( ! in_array( $int_user_id, $known_admins, true ) ) {
+                $known_admins[] = $int_user_id;
                 update_option( 'nexura_known_safe_admins', $known_admins );
             }
         }
@@ -74,9 +75,9 @@ class Ghost_Admin_Protection {
         }
         set_transient( 'nexura_ghost_admin_last_scan', time(), 12 * HOUR_IN_SECONDS );
 
-        $known_admins = get_option( 'nexura_known_safe_admins', [] );
+        $known_admins = array_map( 'intval', (array) get_option( 'nexura_known_safe_admins', [] ) );
         
-        $current_admins = get_users( [ 'role' => 'administrator', 'fields' => 'ID' ] );
+        $current_admins = array_map( 'intval', (array) get_users( [ 'role' => 'administrator', 'fields' => 'ID' ] ) );
         
         if ( empty( $known_admins ) ) {
             // First time setup: whitelist all current admins assuming the site is clean right now
@@ -85,7 +86,7 @@ class Ghost_Admin_Protection {
         }
 
         foreach ( $current_admins as $admin_id ) {
-            if ( ! in_array( $admin_id, $known_admins, true ) ) {
+            if ( ! in_array( (int) $admin_id, $known_admins, true ) ) {
                 // A new admin appeared that we didn't whitelist!
                 $user = get_userdata( $admin_id );
                 if ( $user ) {

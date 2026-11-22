@@ -58,7 +58,7 @@ class Security_Score {
         $score += max( 0, $vuln_points );
 
         // 3. Security Hardening & Headers (20 points)
-        if ( get_option( 'NEXURA_add_security_headers', 0 ) ) {
+        if ( get_option( 'NEXURA_sh_enable_all', 0 ) || get_option( 'NEXURA_add_security_headers', 0 ) ) {
             $score += 10;
         }
         if ( get_option( 'NEXURA_disable_file_editor', 0 ) ) {
@@ -66,7 +66,11 @@ class Security_Score {
         }
 
         // 4. Two-Factor Authentication & Login Security (20 points)
-        if ( get_option( 'NEXURA_enable_2fa', 0 ) ) {
+        $has_2fa = (bool) get_option( 'NEXURA_enable_2fa', 0 )
+            || (bool) get_option( 'NEXURA_2fa_enabled', 0 )
+            || ! empty( get_option( 'NEXURA_2fa_enforced_roles', [] ) )
+            || ( is_user_logged_in() && (bool) get_user_meta( get_current_user_id(), 'NEXURA_2fa_enabled', true ) );
+        if ( $has_2fa ) {
             $score += 15;
         }
         if ( get_option( 'NEXURA_enable_pwned_check', 0 ) ) {

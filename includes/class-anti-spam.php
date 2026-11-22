@@ -36,8 +36,12 @@ class Anti_Spam {
         }
 
         // WordPress Login, Registration, and Password Recovery Protection
-        $site_key = get_option( 'NEXURA_captcha_site_key', '' );
-        if ( ! empty( $site_key ) ) {
+        $site_key     = get_option( 'NEXURA_captcha_site_key', '' );
+        $captcha_type = get_option( 'NEXURA_captcha_type', 'turnstile' );
+        $is_provider_allowed = ( $captcha_type === 'turnstile' && get_option( 'NEXURA_enable_turnstile', '1' ) !== '0' )
+            || ( $captcha_type === 'recaptcha' && get_option( 'NEXURA_enable_recaptcha', '1' ) !== '0' );
+
+        if ( ! empty( $site_key ) && $is_provider_allowed ) {
             add_action( 'login_form', [ $this, 'add_captcha_to_login_form' ] );
             add_action( 'register_form', [ $this, 'add_captcha_to_login_form' ] );
             add_action( 'lostpassword_form', [ $this, 'add_captcha_to_login_form' ] );
@@ -75,9 +79,9 @@ class Anti_Spam {
         }
 
         $type = get_option( 'NEXURA_captcha_type', 'turnstile' );
-        if ( $type === 'turnstile' ) {
+        if ( $type === 'turnstile' && get_option( 'NEXURA_enable_turnstile', '1' ) !== '0' ) {
             wp_enqueue_script( 'nexura-turnstile', 'https://challenges.cloudflare.com/turnstile/v0/api.js', [], NEXURA_VERSION, true ); // phpcs:ignore PluginCheck.CodeAnalysis.EnqueuedResourceOffloading.OffloadedContent
-        } elseif ( $type === 'recaptcha' ) {
+        } elseif ( $type === 'recaptcha' && get_option( 'NEXURA_enable_recaptcha', '1' ) !== '0' ) {
             // google.com/recaptcha is only loaded when the administrator has explicitly
             // configured reCAPTCHA as the CAPTCHA provider — 100% opt-in.
             wp_enqueue_script( 'nexura-recaptcha', 'https://www.google.com/recaptcha/api.js', [], NEXURA_VERSION, true ); // phpcs:ignore PluginCheck.CodeAnalysis.EnqueuedResourceOffloading.OffloadedContent

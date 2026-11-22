@@ -26,3 +26,17 @@ This plugin utilizes the following third-party libraries. All are GPL-compatible
 - **License:** Apache License 2.0
 - **Source:** https://github.com/maxmind/MaxMind-DB-Reader-php
 - **Location:** `includes/lib/MaxMind/`
+
+## Freemius WordPress SDK
+- **License:** GNU General Public License v3.0 (GPLv3)
+- **Source:** https://github.com/Freemius/wordpress-sdk
+- **Location:** `vendor/freemius/` (`LICENSE.txt`)
+
+## QRCode.js
+- **License:** MIT License
+- **Source:** https://davidshimjs.github.io/qrcodejs/
+- **Location:** `admin/js/qrcode.min.js`
+
+---
+
+For disclosures regarding opt-in external APIs and third-party services (Cloudflare Turnstile, Google reCAPTCHA, HaveIBeenPwned, Google Safe Browsing, VirusTotal, Nexura Threat Intel Cloud, WordPress.org API, FlagCDN, Nexura GeoIP Service, External AI Services, Cloudflare IP Ranges, and Google Time Header Sync), see the **Third-Party Services & External API Connections** section in [`readme.txt`](readme.txt).

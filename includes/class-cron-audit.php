@@ -33,8 +33,17 @@ class Cron_Audit {
         ];
 
         foreach ( $crons as $timestamp => $cronhooks ) {
-            foreach ( (array) $cronhooks as $hook => $events ) {
-                foreach ( (array) $events as $key => $event ) {
+            if ( ! is_array( $cronhooks ) ) {
+                continue;
+            }
+            foreach ( $cronhooks as $hook => $events ) {
+                if ( ! is_array( $events ) ) {
+                    continue;
+                }
+                foreach ( $events as $key => $event ) {
+                    if ( ! is_array( $event ) ) {
+                        continue;
+                    }
                     $is_suspicious = false;
                     $reason = '';
 
@@ -67,7 +76,7 @@ class Cron_Audit {
                         'hook'      => $hook,
                         'timestamp' => $timestamp,
                         'schedule'  => isset( $event['schedule'] ) ? $event['schedule'] : 'single',
-                        'args'      => $event['args'],
+                        'args'      => isset( $event['args'] ) ? $event['args'] : [],
                         'status'    => $status,
                         'reason'    => $reason
                     ];

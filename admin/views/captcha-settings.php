@@ -4,7 +4,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 // phpcs:ignoreFile WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
 
-if ( isset( $_POST['NEXURA_captcha_save'] ) && check_admin_referer( 'NEXURA_captcha_nonce' ) ) {
+if ( isset( $_POST['NEXURA_captcha_save'] ) && \Nexura_Security::can_manage_security() && check_admin_referer( 'NEXURA_captcha_nonce' ) ) {
     $type   = isset( $_POST['NEXURA_captcha_type'] ) ? sanitize_text_field( wp_unslash( $_POST['NEXURA_captcha_type'] ) ) : 'turnstile';
     $site   = isset( $_POST['NEXURA_captcha_site_key'] ) ? sanitize_text_field( wp_unslash( $_POST['NEXURA_captcha_site_key'] ) ) : '';
     $secret = isset( $_POST['NEXURA_captcha_secret_key'] ) ? sanitize_text_field( wp_unslash( $_POST['NEXURA_captcha_secret_key'] ) ) : '';

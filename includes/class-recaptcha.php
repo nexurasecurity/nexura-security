@@ -17,7 +17,7 @@ class reCAPTCHA {
      */
     public function init() {
         $is_enabled = get_option( 'NEXURA_recaptcha_enabled', '0' );
-        if ( $is_enabled !== '1' ) {
+        if ( $is_enabled !== '1' || get_option( 'NEXURA_enable_recaptcha', '1' ) === '0' ) {
             return;
         }
 
@@ -145,9 +145,9 @@ class reCAPTCHA {
             return $user; // Not a login attempt
         }
 
-        // Skip reCAPTCHA on the 2FA verification page — no token is present there.
+        // Skip reCAPTCHA on the 2FA verification page — no token is present there (sanitize_key lowercases).
         $current_action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if ( $current_action === 'NEXURA_2fa_verify' ) {
+        if ( $current_action === 'nexura_2fa_verify' ) {
             return $user;
         }
 

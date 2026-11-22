@@ -52,24 +52,26 @@ class NEXURA_Endpoint_WAF {
         $ip = $this->get_ip();
         if ( ! $ip || in_array( $ip, [ '127.0.0.1', '::1', 'localhost' ], true ) ) return;
 
+        $waf_mode = $this->settings['waf_mode'] ?? 'protecting';
+
         // 1. Memory / Fast Ban Check
         if ( $this->is_ip_banned( $ip ) ) {
-            $this->fast_block( 'Permanently Banned (Repeat Offender)', $ip, 403, 0 );
+            $this->fast_block( 'Permanently Banned (Repeat Offender)', $ip, 403, 0, $waf_mode );
         }
 
         // 2. Rate Limiting Check
         if ( $this->check_rate_limit( $ip ) ) {
-            $this->fast_block( 'Rate Limit Exceeded', $ip, 429, 0 );
+            $this->fast_block( 'Rate Limit Exceeded', $ip, 429, 0, $waf_mode );
         }
 
         // 3. Geo-Blocking Check
         if ( $this->check_geo_block( $ip ) ) {
-            $this->fast_block( 'Geo-Blocked (Country Not Allowed)', $ip, 403, 0 );
+            $this->fast_block( 'Geo-Blocked (Country Not Allowed)', $ip, 403, 0, $waf_mode );
         }
 
         // 4. Custom Firewall Rules
         if ( $this->check_custom_rules( $ip ) ) {
-            $this->fast_block( 'Blocked by Custom Firewall Rule', $ip, 403, 0 );
+            $this->fast_block( 'Blocked by Custom Firewall Rule', $ip, 403, 0, $waf_mode );
         }
 
         // 5. Context-Aware Payload Inspection Engine
@@ -151,7 +153,8 @@ class NEXURA_Endpoint_WAF {
 
         // Direct Execution Defense for Uploads directory
         if ( $is_uploads && preg_match( '/\.(php|phtml|php3|php4|php5|phps|pht)$/i', $request_uri ) ) {
-            $this->fast_block( 'Direct PHP Execution in Uploads Directory', $ip, 403, 3 );
+            $waf_mode = $this->settings['waf_mode'] ?? 'protecting';
+            $this->fast_block( 'Direct PHP Execution in Uploads Directory', $ip, 403, 3, $waf_mode );
         }
 
         $risk_score = 0;
@@ -262,7 +265,7 @@ class NEXURA_Endpoint_WAF {
             // "status=active" or "role=admin" in API payloads.
             'SQLi Boolean Tautology' => ['score' => 40, 'pattern' => '/\b(or|and)\b\s+[\'"]?\d+[\'"]?\s*=\s*[\'"]?\d+[\'"]?/i'],
             'SQLi Functions & Schema'    => ['score' => 45, 'pattern' => '/(\bselect\b\s+.+\s+\bfrom\b|\bsleep\s*\(\s*\d+\s*\)|\bbenchmark\s*\(|\binformation_schema\b|\bextractvalue\s*\(|\bupdatexml\s*\()/i'],
-            'SQLi Comment Injection'     => ['score' => 35, 'pattern' => '/(\/\*!.*\*\/|--\s*$|#\s*$)/i'],
+            'SQLi Comment Injection'     => ['score' => 35, 'pattern' => '/(\/\*!\d*.*?\*\/|[\'"]\s*--\s|;\s*--\s)/i'],
 
             'Command Injection'          => ['score' => 45, 'pattern' => '/(?:\bexec\s+xp_cmdshell\b|;\s*wget\b|;\s*curl\b|;\s*system\s*\()/i'],
             'PHP Code Execution Payload' => ['score' => 50, 'pattern' => '/(?:eval\s*\(\s*base64_decode|gzinflate\s*\(\s*base64_decode|passthru\s*\(|shell_exec\s*\()/i'],

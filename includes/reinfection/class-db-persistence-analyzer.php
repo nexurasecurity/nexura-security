@@ -36,16 +36,28 @@ class DB_Persistence_Analyzer {
         global $wpdb;
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-        $options = $wpdb->get_results( "SELECT option_name, option_value FROM {$wpdb->options} WHERE autoload = 'yes'" );
+        $options = $wpdb->get_results(
+            "SELECT option_name, option_value FROM {$wpdb->options}
+             WHERE autoload IN ('yes', 'on', 'auto', 'auto-on')
+             AND option_name NOT LIKE '\\_transient%'
+             AND option_name NOT LIKE '\\_site\\_transient%'"
+        );
 
-        $suspicious_keywords = [ 'base64_decode', 'eval(', 'system(', 'shell_exec(', 'passthru(', 'assert(' ];
+        $suspicious_patterns = [
+            'base64_decode' => '/\bbase64_decode\s*\(/i',
+            'eval('         => '/\beval\s*\(/i',
+            'system('       => '/\bsystem\s*\(/i',
+            'shell_exec('   => '/\bshell_exec\s*\(/i',
+            'passthru('     => '/\bpassthru\s*\(/i',
+            'assert('       => '/\bassert\s*\(/i',
+        ];
 
         foreach ( $options as $opt ) {
-            if ( strpos( $opt->option_name, 'NEXURA_' ) === 0 ) {
+            if ( stripos( $opt->option_name, 'NEXURA_' ) === 0 ) {
                 continue;
             }
-            foreach ( $suspicious_keywords as $keyword ) {
-                if ( stripos( $opt->option_value, $keyword ) !== false ) {
+            foreach ( $suspicious_patterns as $keyword => $regex ) {
+                if ( preg_match( $regex, $opt->option_value ) ) {
                     $findings[] = [
                         'type'     => 'db_payload',
                         'option'   => $opt->option_name,

@@ -89,6 +89,9 @@ class Cron_Persistence_Analyzer {
         $processed_hooks = [];
 
         foreach ( $cron_array as $timestamp => $cronhooks ) {
+            if ( ! is_array( $cronhooks ) ) {
+                continue;
+            }
             foreach ( $cronhooks as $hook => $keys ) {
                 if ( isset( $processed_hooks[ $hook ] ) ) {
                     continue;

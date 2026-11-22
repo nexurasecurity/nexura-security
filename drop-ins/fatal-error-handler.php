@@ -46,25 +46,24 @@ class Nexura_Fatal_Error_Handler extends WP_Fatal_Error_Handler {
             if ( is_admin() || ! headers_sent() ) {
                 $this->display_error_template( $error, $handled );
             }
-        } catch ( Exception $e ) {
-            // Catch exceptions and remain silent.
+        } catch ( \Throwable $e ) {
+            // Catch exceptions and PHP 7/8+ Errors and remain silent.
         }
     }
 
     private function auto_heal( $error ) {
-        if ( empty( $error['file'] ) ) {
+        if ( empty( $error['file'] ) || ! function_exists( 'get_option' ) || ! function_exists( 'update_option' ) ) {
             return;
         }
 
         $file = wp_normalize_path( $error['file'] );
-        // WP_PLUGIN_DIR is always defined when this drop-in runs (WordPress is already loaded).
-        $plugin_dir = wp_normalize_path( WP_PLUGIN_DIR );
+        $plugin_dir = defined( 'WP_PLUGIN_DIR' ) ? trailingslashit( wp_normalize_path( WP_PLUGIN_DIR ) ) : '';
         // get_theme_root() is the correct WP API — no hardcoded fallback path.
-        $theme_dir  = function_exists( 'get_theme_root' ) ? wp_normalize_path( get_theme_root() ) : '';
+        $theme_dir  = function_exists( 'get_theme_root' ) ? trailingslashit( wp_normalize_path( get_theme_root() ) ) : '';
 
         // 1. Detect if a Plugin caused the crash
-        if ( strpos( $file, $plugin_dir ) === 0 ) {
-            $relative_path = str_replace( $plugin_dir . '/', '', $file );
+        if ( ! empty( $plugin_dir ) && strpos( $file, $plugin_dir ) === 0 ) {
+            $relative_path = substr( $file, strlen( $plugin_dir ) );
             $parts = explode( '/', $relative_path );
             
             if ( ! empty( $parts ) ) {
@@ -105,8 +104,8 @@ class Nexura_Fatal_Error_Handler extends WP_Fatal_Error_Handler {
         }
 
         // 2. Detect if a Theme caused the crash
-        if ( strpos( $file, $theme_dir ) === 0 ) {
-            $relative_path = str_replace( $theme_dir . '/', '', $file );
+        if ( ! empty( $theme_dir ) && strpos( $file, $theme_dir ) === 0 ) {
+            $relative_path = substr( $file, strlen( $theme_dir ) );
             $parts = explode( '/', $relative_path );
             
             if ( ! empty( $parts ) ) {

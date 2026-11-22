@@ -194,21 +194,27 @@ class File_Integrity {
      * @return array List of tampered core files.
      */
     public function check_core_integrity() {
-        // Static hashes for a specific known WordPress version (e.g., 6.4.2)
-        // In Pro, this could be extended to fetch from WordPress.org API dynamically.
-        $core_hashes = [
-            'index.php'            => '155d56215392d477bb0ebc02058b73f9', // MD5 example
-            'wp-config-sample.php' => '543232145392d477bb0ebc02058b73fa',
-            'wp-load.php'          => '654d56215392d477bb0ebc02058b73fb'
-        ];
+        global $wp_version;
+        if ( ! function_exists( 'get_core_checksums' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/update.php';
+        }
 
+        $checksums = function_exists( 'get_core_checksums' ) ? get_core_checksums( $wp_version, get_locale() ) : false;
+        if ( ! is_array( $checksums ) || empty( $checksums ) ) {
+            return [];
+        }
+
+        $core_files = [ 'index.php', 'wp-load.php', 'wp-settings.php', 'wp-login.php' ];
         $tampered_files = [];
 
-        foreach ( $core_hashes as $filename => $expected_hash ) {
+        foreach ( $core_files as $filename ) {
+            if ( ! isset( $checksums[ $filename ] ) ) {
+                continue;
+            }
             $file_path = ABSPATH . $filename;
             if ( file_exists( $file_path ) ) {
                 $actual_hash = md5_file( $file_path );
-                if ( $actual_hash !== $expected_hash ) {
+                if ( $actual_hash !== $checksums[ $filename ] ) {
                     $tampered_files[] = $filename;
                 }
             } else {
@@ -216,9 +222,10 @@ class File_Integrity {
             }
         }
 
-        // Log alert if tampered files found (simulated action)
         if ( ! empty( $tampered_files ) ) {
             update_option( 'NEXURA_core_tamper_alert', $tampered_files, false );
+        } else {
+            delete_option( 'NEXURA_core_tamper_alert' );
         }
 
         return $tampered_files;

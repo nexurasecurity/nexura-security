@@ -160,6 +160,9 @@ class Hardening {
      * Rebuilds the .htaccess file with active security rules.
      */
     public function rebuild_htaccess_rules() {
+        if ( ! function_exists( 'get_home_path' ) ) {
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+        }
         require_once ABSPATH . 'wp-admin/includes/misc.php';
 
         $htaccess_file = get_home_path() . '.htaccess';

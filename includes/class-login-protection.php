@@ -283,10 +283,18 @@ class Login_Protection {
         }
         
         $cf_ips = [];
-        $log_dir = wp_upload_dir()['basedir'] . '/nexura-security';
-        $cf_file = $log_dir . '/cloudflare-ips.php';
-        if ( file_exists( $cf_file ) ) {
-            $cf_ips = include $cf_file;
+        $upload_base = wp_upload_dir()['basedir'];
+        $cf_paths = [
+            $upload_base . '/nexura-security/cloudflare-ips.php',
+            $upload_base . '/nexura-logs/cloudflare-ips.php',
+        ];
+        foreach ( $cf_paths as $cf_file ) {
+            if ( file_exists( $cf_file ) ) {
+                $cf_ips = include $cf_file;
+                if ( ! empty( $cf_ips ) && is_array( $cf_ips ) ) {
+                    break;
+                }
+            }
         }
         
         if ( empty( $cf_ips ) || ! is_array( $cf_ips ) ) {
@@ -358,9 +366,9 @@ class Login_Protection {
         // Block ALL access (GET and POST) to wp-login.php when a custom slug is configured.
         // This closes the bypass where a hacker could POST directly to wp-login.php.
         if ( strpos( $path, 'wp-login.php' ) !== false && ! is_user_logged_in() ) {
-            // Allow only action=NEXURA_2fa_verify so our own 2FA flow continues to work.
+            // Allow only action=NEXURA_2fa_verify so our own 2FA flow continues to work (sanitize_key lowercases).
             $action = isset( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-            if ( $action === 'NEXURA_2fa_verify' ) {
+            if ( $action === 'nexura_2fa_verify' ) {
                 return;
             }
 

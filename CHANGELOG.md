@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.24] - 2026-11-22
+
+### Security Hardening
+- **Scanner & Import Hardening:** Eliminated dynamic PHP file loading in the malware scanner in favor of inline heuristic scanning, and added strict option allowlist/denylist sanitization to JSON settings import.
+- **Admin UI XSS Hardening:** Hardened admin UI against Stored/DOM XSS across scan results, logs, active monitoring, diff viewer, dashboard GeoIP, WAF analytics, and AI chat.
+- **Remediation & Deserialization Hardening:** Added strict `ABSPATH` boundary checks, core option deletion protection, and config file allowlists in Reinfection Remediator and File Diff Viewer; hardened `unserialize()` with `allowed_classes => false`.
+- **Network, Cookie & Rate Limit Hardening:** Verified Cloudflare CIDR ranges before trusting `CF-Connecting-IP` headers to prevent IP spoofing, switched webhook delivery to `wp_safe_remote_post()`, added `Secure`/`HttpOnly`/`SameSite` cookie flags, and added rate limiting to the visitor tracker endpoint.
+
+### Critical Bug Fix & Bug Fixes
+- **Critical Fix:** Fixed a pre-boot WSOD issue in the legacy WAF fallback path (`vendor/nexura-sys/src/nexura-waf.php`) for sites upgrading from older versions.
+- **Bug Fix:** Fixed Instant Hardening toggles failing due to `sanitize_key()` lowercasing, fixed Ghost Admin Protection strict integer/string mismatch that could demote newly created admins, and fixed 2FA 403 blocks when Custom Login URL is active.
+- **Bug Fix:** Fixed Fatal Error drop-in theme reset edge case, broken class namespaces in Pro file manager/auto-fixer/logger, hardcoded plugin directory path in AI Auto-Fixer, broken DB IDS menu slug, Security Score option checks, Cloudflare IP sync path mismatch, PHP 8.x cron array warnings, and complete cron cleanup on deactivation.
+
+### AI, Scanner & Compliance Updates
+- **AI & Scanner Updates:** Updated retired/deprecated AI models (Claude, Gemini, OpenAI, and Cloudflare Workers AI) with automatic migration for existing saved settings; updated PHP EOL vulnerability checks for 2026 standards (PHP 8.1/8.2 EOL); fixed WAF learning mode handling and reduced SQLi comment false positives.
+- **Compliance:** Updated Third-Party Services disclosures in `readme.txt` and ensured Reinfection Guard Free-tier consistency.
+
+---
+
 ## [1.0.23] - 2026-10-26
 
 ### Features & Enhancements

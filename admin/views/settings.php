@@ -664,7 +664,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                                 <strong style="color: #f8fafc; font-size: 14px;"><?php esc_html_e( 'Nexura Threat Intelligence', 'nexura-security' ); ?></strong>
                                 <label class="nexura-switch" style="margin: 0;">
                                     <input type="hidden" name="NEXURA_enable_threat_intel" value="0">
-                                    <input type="checkbox" name="NEXURA_enable_threat_intel" id="NEXURA_enable_threat_intel" value="1" <?php checked( get_option('NEXURA_enable_threat_intel', 1), 1 ); ?> />
+                                    <input type="checkbox" name="NEXURA_enable_threat_intel" id="NEXURA_privacy_threat_intel" value="1" <?php checked( get_option('NEXURA_enable_threat_intel', 0), 1 ); ?> />
                                     <span class="nexura-slider"></span>
                                 </label>
                             </div>

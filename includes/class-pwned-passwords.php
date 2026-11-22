@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Pwned_Passwords {
 
     public function init() {
-        if ( ! get_option( 'NEXURA_enable_pwned_check', 0 ) ) {
+        if ( ! get_option( 'NEXURA_enable_pwned_check', 0 ) || get_option( 'NEXURA_enable_hibp', '1' ) === '0' ) {
             return;
         }
 

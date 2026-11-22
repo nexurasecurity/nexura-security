@@ -539,7 +539,8 @@ jQuery(document).ready(function($) {
                     rowData.push('<td><span style="font-size: 12px; color: var(--nexura-text-muted);">' + lineDisplay + '</span></td>');
                 }
 
-                rowData.push('<td><strong>' + malwareName + '</strong></td>');
+                var safeMalwareName = $('<div>').text(malwareName).html();
+                rowData.push('<td><strong>' + safeMalwareName + '</strong></td>');
                 rowData.push('<td class="' + riskClass + '">' + riskScore + '</td>');
 
                 // Trigger hook so PRO can add File Path, Line, Action columns
@@ -1981,7 +1982,7 @@ jQuery(document).ready(function($) {
             success: function(response) {
                 if (response.success) {
                     if (isEnabled) {
-                        $msg.html('<div class="nexura-alert nexura-alert-success" style="padding: 15px; background: #ecfdf5; color: #065f46; border-radius: 6px; border-left: 4px solid #10b981;">??? Pre-Boot WAF is currently active and protecting your server.</div>');
+                        $msg.html('<div class="nexura-alert nexura-alert-success" style="padding: 15px; background: #ecfdf5; color: #065f46; border-radius: 6px; border-left: 4px solid #10b981;">Pre-Boot WAF is currently active and protecting your server.</div>');
                     } else {
                         $msg.html('<div class="nexura-alert nexura-alert-warning" style="padding: 15px; background: #fffbeb; color: #b45309; border-radius: 6px; border-left: 4px solid #f59e0b;">?????? Pre-Boot WAF is currently disabled. Turn it on to block malicious attacks before WordPress loads.</div>');
                     }

@@ -19,6 +19,13 @@ class Google_Safe {
      * @return array Status of the URL.
      */
     public function check_url( $url ) {
+        if ( get_option( 'NEXURA_enable_safe_browsing', '1' ) === '0' ) {
+            return [
+                'error'   => true,
+                'message' => 'Google Safe Browsing is disabled in Privacy & External Services settings.'
+            ];
+        }
+
         $api_key = get_option( 'NEXURA_google_api_key' );
         
         if ( empty( $api_key ) ) {

@@ -241,7 +241,7 @@ class Alert_System {
             $payload['content'] = '';
         }
 
-        wp_remote_post( $webhook_url, [
+        wp_safe_remote_post( $webhook_url, [
             'headers'     => [ 'Content-Type' => 'application/json' ],
             'body'        => wp_json_encode( $payload ),
             'timeout'     => 10,

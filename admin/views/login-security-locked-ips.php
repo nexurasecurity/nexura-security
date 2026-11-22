@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 global $wpdb;
 
 // Handle Unblock Action
-if ( isset( $_POST['unblock_ip'] ) && isset( $_POST['_wpnonce'] ) ) {
+if ( isset( $_POST['unblock_ip'] ) && isset( $_POST['_wpnonce'] ) && \Nexura_Security::can_manage_security() ) {
     if ( wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['_wpnonce'] ) ), 'nexura_unblock_ip' ) ) {
         $ip_to_unblock = sanitize_text_field( wp_unslash( $_POST['unblock_ip'] ) );
         delete_transient( 'NEXURA_login_attempts_' . $ip_to_unblock );

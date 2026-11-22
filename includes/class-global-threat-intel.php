@@ -149,17 +149,17 @@ class Global_Threat_Intel {
         }
         
         if ( ! empty( $cf_ips ) ) {
-            // Save as an array in a PHP file for ultra-fast reading by the standalone WAF
+            // Save as an array in a PHP file for ultra-fast reading by the WAF and Login Protection
             $upload_dir = wp_upload_dir();
-            $log_dir = $upload_dir['basedir'] . '/nexura-logs';
-            if ( ! is_dir( $log_dir ) ) wp_mkdir_p( $log_dir );
+            $sec_dir = $upload_dir['basedir'] . '/nexura-security';
+            if ( ! is_dir( $sec_dir ) ) wp_mkdir_p( $sec_dir );
             
             // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_var_export
             $file_content = "<?php\n// Auto-generated Cloudflare IPs\nreturn " . var_export( $cf_ips, true ) . ";\n";
             require_once ABSPATH . 'wp-admin/includes/file.php';
             WP_Filesystem();
             global $wp_filesystem;
-            $wp_filesystem->put_contents( $log_dir . '/cloudflare-ips.php', $file_content, FS_CHMOD_FILE );
+            $wp_filesystem->put_contents( $sec_dir . '/cloudflare-ips.php', $file_content, FS_CHMOD_FILE );
         }
     }
 
@@ -202,7 +202,17 @@ class Global_Threat_Intel {
             if ( $this->verify_captcha() ) {
                 // Mark as verified for this session.
                 // Use SHA-256 instead of MD5 — collision-resistant for a security cookie.
-                setcookie( 'NEXURA_verified_ip', hash( 'sha256', $ip . wp_salt() ), time() + 3600, '/' );
+                setcookie(
+                    'NEXURA_verified_ip',
+                    hash( 'sha256', $ip . wp_salt() ),
+                    [
+                        'expires'  => time() + 3600,
+                        'path'     => '/',
+                        'secure'   => is_ssl(),
+                        'httponly' => true,
+                        'samesite' => 'Lax',
+                    ]
+                );
                 $redirect_uri = isset( $_SERVER['REQUEST_URI'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REQUEST_URI'] ) ) : '/';
                 wp_safe_redirect( esc_url_raw( $redirect_uri ) );
                 exit;
@@ -324,12 +334,10 @@ class Global_Threat_Intel {
     }
 
     private function get_client_ip() {
-        $ip = '127.0.0.1';
-        if ( isset( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
-            $ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
-        } elseif ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
-            $ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+        if ( class_exists( '\Nexura_Security\Attack_Logger' ) ) {
+            return \Nexura_Security\Attack_Logger::get_client_ip();
         }
+        $ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '127.0.0.1';
         return filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '127.0.0.1';
     }
 }

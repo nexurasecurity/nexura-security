@@ -89,17 +89,21 @@ class DB_Scanner {
         }
 
         // Check for scripts injected into options (like active_plugins or widget_text)
+        // Exclude both _transient% and _site_transient% (e.g. WP core RSS feed caches _site_transient_feed_*)
+        // as well as Nexura's own stored scan/signature options.
         $eval_token = 'ev' . 'al';
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $suspicious_options = $wpdb->get_results( $wpdb->prepare(
-            "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name NOT LIKE %s AND (option_value LIKE %s OR option_value LIKE %s)",
-            '\_transient%',
+            "SELECT option_name, option_value FROM {$wpdb->options} WHERE option_name NOT LIKE %s AND option_name NOT LIKE %s AND option_name NOT LIKE %s AND (option_value LIKE %s OR option_value LIKE %s)",
+            $wpdb->esc_like( '_transient' ) . '%',
+            $wpdb->esc_like( '_site_transient' ) . '%',
+            $wpdb->esc_like( 'NEXURA_' ) . '%',
             '%<script%',
             '%' . $wpdb->esc_like( $eval_token ) . '(%'
         ) );
 
         foreach ( $suspicious_options as $opt ) {
-            if ( preg_match( '/(<script.*?>.*?<\/script>|' . $eval_token . '\s*\()/is', $opt->option_value ) ) {
+            if ( preg_match( '/(<script\b[^>]*>.*?<\/script>|\b' . $eval_token . '\s*\()/is', $opt->option_value ) ) {
                 $findings[] = [
                     'pattern'     => 'Injected Script in Option: ' . $opt->option_name,
                     'risk'        => 'High',
@@ -123,17 +127,28 @@ class DB_Scanner {
         $eval_token = 'ev' . 'al';
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
         $suspicious_posts = $wpdb->get_results( $wpdb->prepare(
-            "SELECT ID, post_title, post_type FROM {$wpdb->posts} WHERE post_status = 'publish' AND (post_content LIKE %s OR post_content LIKE %s OR post_content LIKE %s)",
+            "SELECT ID, post_title, post_type, post_content FROM {$wpdb->posts} WHERE post_status = 'publish' AND (post_content LIKE %s OR post_content LIKE %s OR post_content LIKE %s)",
             '%<script%',
             '%<iframe%',
             '%' . $wpdb->esc_like( $eval_token ) . '(%'
         ) );
 
+        $trusted_iframe_hosts = '(?:youtube\.com|youtube-nocookie\.com|youtu\.be|player\.vimeo\.com|vimeo\.com|google\.com\/maps|maps\.google\.com|open\.spotify\.com|w\.soundcloud\.com|loom\.com|calendly\.com|facebook\.com\/plugins|instagram\.com|tiktok\.com|codepen\.io|docs\.google\.com)';
+
         foreach ( $suspicious_posts as $post ) {
+            $content = isset( $post->post_content ) ? $post->post_content : '';
+            $has_script = (bool) preg_match( '/<script\b[^>]*>/i', $content );
+            $has_eval   = (bool) preg_match( '/\b' . $eval_token . '\s*\(/i', $content );
+            $has_bad_iframe = (bool) preg_match( '/<iframe\b[^>]+src=["\']https?:\/\/(?!' . $trusted_iframe_hosts . ')(?!www\.' . $trusted_iframe_hosts . ')[^"\']+["\']/i', $content );
+
+            if ( ! $has_script && ! $has_eval && ! $has_bad_iframe ) {
+                continue;
+            }
+
             $findings[] = [
                 'pattern'     => 'Injected Code in ' . ucfirst( $post->post_type ) . ' (ID: ' . $post->ID . ')',
                 'risk'        => 'High',
-                'description' => 'Suspicious <script>, <iframe>, or ' . $eval_token . '() found in the content of "' . esc_html( $post->post_title ) . '".',
+                'description' => 'Suspicious <script>, untrusted <iframe>, or ' . $eval_token . '() found in the content of "' . esc_html( $post->post_title ) . '".',
                 'confidence'  => 85,
                 'line_number' => 0
             ];

@@ -6,7 +6,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 $cron_audit = new \Nexura_Security\Cron_Audit();
 
-if ( isset( $_POST['nexura_clean_cron'] ) && check_admin_referer( 'nexura_clean_cron_action' ) ) {
+if ( isset( $_POST['nexura_clean_cron'] ) && \Nexura_Security::can_manage_security() && check_admin_referer( 'nexura_clean_cron_action' ) ) {
     delete_option( 'cron' );
     echo '<div class="notice notice-success is-dismissible" style="margin-top:20px; border-left-color: #10b981;"><p><strong>' . esc_html__( 'WP-Cron Cleaned:', 'nexura-security' ) . '</strong> ' . esc_html__( 'All scheduled background tasks have been successfully removed. Core and active plugin tasks will regenerate automatically.', 'nexura-security' ) . '</p></div>';
 }

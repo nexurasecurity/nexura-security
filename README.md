@@ -5,7 +5,7 @@
   <br><br>
   <img src="https://img.shields.io/badge/Requires_WP-5.8+-blue.svg?style=for-the-badge" alt="Requires WP">
   <img src="https://img.shields.io/badge/Requires_PHP-7.4+-blue.svg?style=for-the-badge" alt="Requires PHP">
-  <img src="https://img.shields.io/badge/Version-1.0.23-orange.svg?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/Version-1.0.24-orange.svg?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Tested_up_to-7.1-green.svg?style=for-the-badge" alt="Tested WP">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPLv2-blue.svg?style=for-the-badge" alt="License"></a>
   <br>
@@ -34,6 +34,7 @@ Looking for a **lightweight, faster alternative** to Wordfence, Sucuri, or MalCa
 
 ## 🛡️ Free Features (Included with This Plugin)
 
+* **🛡️ Reinfection Guard & Root Cause Analyzer:** Scans persistence vectors (hidden MU-plugins, rogue drop-ins, unauthorized uploads PHP scripts, WP-Cron tasks, database injections, and config tampering) with an interactive attack vector map to stop malware from returning.
 * **🔍 Deep Malware Scanner:** Automatically scans your entire WordPress installation — themes, plugins, uploads, and core files — for hidden backdoors, obfuscated PHP code, suspicious JavaScript, and known malware patterns.
 * **📂 File Integrity Monitor:** Compares your WordPress core files against clean, official versions to detect any unauthorized changes, and checks the root directory for suspicious drops.
 * **🔐 Advanced Login Protection:** Includes Two-Factor Authentication (2FA) with TOTP support and passwordless magic link logins.
@@ -76,7 +77,7 @@ Want to go further? **Nexura Security Pro** adds powerful automation and advance
 
 ## 🔗 Third-Party Services & Privacy
 
-To provide comprehensive security, Nexura Security connects to several trusted third-party services (e.g., Cloudflare, HaveIBeenPwned, VirusTotal, WordPress.org API, the Nexura GeoIP Service, and the Nexura Threat Intel Cloud). **No connections are made automatically — each feature must be enabled by you in the plugin settings.**
+To provide comprehensive security, Nexura Security connects to several trusted third-party services (e.g., Cloudflare Turnstile & IP Ranges, Google reCAPTCHA, HaveIBeenPwned, Google Safe Browsing, VirusTotal, WordPress.org API, FlagCDN, Google Time Header Sync, External AI Services for Pro, the Nexura GeoIP Service, and the Nexura Threat Intel Cloud). **All connections are opt-in — each feature must be enabled by you in the plugin settings.** See [`readme.txt`](readme.txt) for full disclosures and [`THIRD-PARTY-LICENSES.md`](THIRD-PARTY-LICENSES.md) for bundled library licenses.
 
 We believe in complete transparency about how your data is handled:
 * Nexura Security does **NOT** collect any personal data from your website visitors.

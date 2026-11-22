@@ -13,7 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 class Session_Manager {
 
     public function init() {
-        if ( ! get_option( 'NEXURA_enable_idle_timeout', 1 ) ) {
+        // Opt-in only (default 0) so admins are never unexpectedly logged out during active work or scans.
+        if ( ! get_option( 'NEXURA_enable_idle_timeout', 0 ) ) {
             return;
         }
 

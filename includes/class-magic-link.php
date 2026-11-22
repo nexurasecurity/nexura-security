@@ -43,13 +43,12 @@ class Magic_Link {
                 wp_die( esc_html__( 'Security check failed.', 'nexura-security' ) );
             }
 
-            $ip = '127.0.0.1';
-            if ( isset( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
-                $ip = sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) );
-            } elseif ( isset( $_SERVER['REMOTE_ADDR'] ) ) {
-                $ip = sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) );
+            if ( class_exists( '\Nexura_Security\Attack_Logger' ) ) {
+                $ip = \Nexura_Security\Attack_Logger::get_client_ip();
+            } else {
+                $raw_ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '127.0.0.1';
+                $ip = filter_var( $raw_ip, FILTER_VALIDATE_IP ) ? $raw_ip : '127.0.0.1';
             }
-            $ip = filter_var( $ip, FILTER_VALIDATE_IP ) ? $ip : '127.0.0.1';
 
             $rate_limit_key = 'NEXURA_magic_link_rate_' . md5($ip);
             $attempts = get_transient( $rate_limit_key );

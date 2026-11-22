@@ -631,7 +631,7 @@ class Scanner {
                     $site_url    = site_url();
                     $logo_url    = NEXURA_PLUGIN_URL . 'admin/img/Nexura-Security_log.jpg';
                     
-                    $subject = sprintf( '[%s] Security Alert: %d threat Threats Detected', get_bloginfo( 'name' ), $issues );
+                    $subject = sprintf( '[%s] Security Alert: %d Threats Detected', get_bloginfo( 'name' ), $issues );
                     
                     $message = '<html><body style="font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; color: #333;">';
                     $message .= '<div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">';
@@ -643,7 +643,7 @@ class Scanner {
                     
                     // Content
                     $message .= '<div style="padding: 30px;">';
-                    $message .= '<h2 style="color: #e63946; margin-top: 0;">âš ï¸ Security Alert</h2>';
+                    $message .= '<h2 style="color: #e63946; margin-top: 0;">&#9888;&#65039; Security Alert</h2>';
                     $message .= '<p style="font-size: 16px; line-height: 1.6;">Hello,</p>';
                     $message .= '<p style="font-size: 16px; line-height: 1.6;"><strong>Nexura Security</strong> has completed a scan on your website (<a href="' . esc_url( $site_url ) . '" style="color: #1d3557; text-decoration: none;">' . esc_html( $site_url ) . '</a>) and detected <strong style="color: #e63946;">' . intval( $issues ) . ' security issues/threats</strong>.</p>';
                     $message .= '<p style="font-size: 16px; line-height: 1.6;">Your website is currently at risk. Please log in to your WordPress dashboard to review the threats immediately.</p>';
@@ -949,10 +949,11 @@ class Scanner {
                     // Posts table: ONLY check for specific web injection patterns.
                     // Do NOT run cloud YARA signatures here â€” they match binary patterns and
                     // generate thousands of false positives against legitimate post content.
+                    $trusted_iframe_hosts = '(?:youtube\.com|youtube-nocookie\.com|youtu\.be|player\.vimeo\.com|vimeo\.com|google\.com\/maps|maps\.google\.com|open\.spotify\.com|w\.soundcloud\.com|loom\.com|calendly\.com|facebook\.com\/plugins|instagram\.com|tiktok\.com|codepen\.io|docs\.google\.com)';
                     $post_dangerous_patterns = [
                         'eval_injection'   => [ 'keyword' => 'ev' . 'al(',   'regex' => '/\bev' . 'al\s*\(\s*(?:base64_decode|gzinflate|str_rot13)/i' ],
                         'script_injection' => [ 'keyword' => '<script',  'regex' => '/<script[^>]*src=["\'][^"\']{10,}["\'][^>]*>/i' ],
-                        'iframe_injection' => [ 'keyword' => '<iframe',  'regex' => '/<iframe[^>]+src=["\'][^"\']{10,}["\'][^>]*>/i' ],
+                        'iframe_injection' => [ 'keyword' => '<iframe',  'regex' => '/<iframe[^>]+src=["\']https?:\/\/(?!' . $trusted_iframe_hosts . ')(?!www\.' . $trusted_iframe_hosts . ')[^"\']{10,}["\'][^>]*>/i' ],
                     ];
 
                     foreach ( $post_dangerous_patterns as $check_key => $check ) {
@@ -991,6 +992,8 @@ class Scanner {
                     // Skip well-known WordPress core/plugin options that legitimately contain HTML, JS, or complex serialized data.
                     // Scanning these causes a high rate of false positives (e.g., Elementor data, CSS, JS settings).
                     static $safe_option_prefixes = [
+                        '_site_transient_feed_', '_transient_feed_', '_site_transient_dash_', '_transient_dash_',
+                        '_site_transient_browser_', '_site_transient_php_check_', '_site_transient_update_',
                         'elementor', 'et_', 'wpforms', 'woocommerce', 'wp_user_roles',
                         'widget_', 'sidebars_widgets', 'nav_menu', 'jetpack',
                         'rankmath', 'rank_math', 'yoast', '_yoast', 'aioseo',
@@ -1169,27 +1172,16 @@ class Scanner {
             }
         }
 
-        // 2. Phase 7: Ghost Engine threat Scan (Ephemeral Cloud Engine)
+        // 2. Built-in Heuristic Threat Scan (Inline — no dynamic PHP file loading)
         if ( pathinfo( $file_path, PATHINFO_EXTENSION ) === 'php' || pathinfo( $file_path, PATHINFO_EXTENSION ) === 'js' ) {
-            static $engine_path_cache = null;
-            static $engine_path_checked = false;
-            if ( ! $engine_path_checked ) {
-                $engine_path_cache = get_option( 'NEXURA_active_ghost_engine' );
-                $engine_path_checked = true;
-            }
-            $engine_path = $engine_path_cache;
-            if ( $engine_path && file_exists( $engine_path ) ) {
-                if ( ! class_exists( 'NEXURA_Ghost_Engine' ) ) {
-                    require_once $engine_path;
-                }
-                $ghost_engine = new \NEXURA_Ghost_Engine();
-                $api_result = $ghost_engine->scan( $content );
-                
+            if ( $this->api_client && method_exists( $this->api_client, 'scan_inline' ) ) {
+                $api_result = $this->api_client->scan_inline( $content );
+
                 if ( $api_result && isset( $api_result['is_infected'] ) && $api_result['is_infected'] ) {
                     $findings[] = [
                         'pattern'     => isset( $api_result['pattern'] ) ? $api_result['pattern'] : 'ghost_threat_detected',
                         'risk'        => isset( $api_result['risk'] ) ? $api_result['risk'] : 'High',
-                        'description' => 'Ghost Threat Engine detected malicious p-load.',
+                        'description' => 'Heuristic Threat Engine detected malicious payload.',
                         'confidence'  => isset( $api_result['confidence'] ) ? $api_result['confidence'] : 95,
                         'line_number' => 0
                     ];

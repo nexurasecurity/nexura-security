@@ -16,8 +16,23 @@ class Deactivator {
      * Deactivation logic.
      */
     public static function deactivate() {
-        // Clear scheduled crons
-        wp_clear_scheduled_hook( 'NEXURA_daily_scan' );
+        // Clear all scheduled Nexura crons
+        $cron_hooks = [
+            'NEXURA_daily_scan',
+            'NEXURA_scheduled_scan',
+            'NEXURA_daily_fim_check',
+            'NEXURA_daily_gsb_check',
+            'NEXURA_daily_malware_scan',
+            'NEXURA_daily_log_cleanup',
+            'NEXURA_process_queue',
+            'NEXURA_pro_sync',
+            'NEXURA_sync_threat_intel',
+            'NEXURA_sync_cloudflare_ips',
+            'NEXURA_send_alert_digest',
+        ];
+        foreach ( $cron_hooks as $hook ) {
+            wp_clear_scheduled_hook( $hook );
+        }
         
         // Clear license data to force re-authentication upon reactivation
         delete_option( 'NEXURA_license_key' );

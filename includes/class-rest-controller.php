@@ -313,7 +313,7 @@ class Rest_Controller extends WP_REST_Controller {
         $real_path = realpath( wp_normalize_path( $path ) );
         $real_abspath = realpath( wp_normalize_path( ABSPATH ) );
         
-        if ( $real_path && strpos( $real_path, $real_abspath ) === 0 ) {
+        if ( $real_path && $real_abspath && strpos( wp_normalize_path( $real_path ), trailingslashit( wp_normalize_path( $real_abspath ) ) ) === 0 ) {
             // Block access to sensitive configuration files unless they are flagged as infected or already whitelisted
             if ( basename( $real_path ) === 'wp-config.php' || basename( $real_path ) === 'wp-config-sample.php' ) {
                 $whitelisted = get_option( 'NEXURA_whitelisted_files', [] );
@@ -617,12 +617,13 @@ class Rest_Controller extends WP_REST_Controller {
         }
 
         $file_path = sanitize_text_field( $request->get_param( 'path' ) );
-        if ( empty( $file_path ) || ! file_exists( $file_path ) ) {
-            return new \WP_Error( 'invalid_path', 'File path is invalid or file does not exist.', [ 'status' => 400 ] );
+        $secure_path = $this->get_secure_path( $file_path );
+        if ( ! $secure_path || ! file_exists( $secure_path ) ) {
+            return new \WP_Error( 'invalid_path', 'File path is invalid, prohibited, or file does not exist.', [ 'status' => 403 ] );
         }
 
         $quarantine = new Quarantine();
-        $result = $quarantine->quarantine_file( $file_path );
+        $result = $quarantine->quarantine_file( $secure_path );
 
 
         if ( $result && ! is_wp_error( $result ) ) {

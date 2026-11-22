@@ -1,18 +1,20 @@
 <?php
 // phpcs:ignoreFile
-// If uploaded to site root as a standalone disaster recovery tool, initialize root path safely.
-if ( ! defined( 'ABSPATH' ) && file_exists( __DIR__ . '/wp-config.php' ) ) {
-    define( 'ABSPATH', __DIR__ . '/' );
+// Block direct web execution if this script is still sitting inside wp-content/plugins/.
+$nexura_norm_dir = str_replace( '\\', '/', __DIR__ );
+if ( ! defined( 'ABSPATH' ) && strpos( $nexura_norm_dir, '/wp-content/plugins/' ) !== false ) {
+    exit;
 }
 
+// When uploaded to site root (including an empty hosting root) as a standalone disaster recovery tool:
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+    define( 'ABSPATH', __DIR__ . '/' );
 }
 /**
  * Nexura Security - Disaster Recovery & Rescue Script
- * Version: 1.0.1
+ * Version: 1.0.24
  * 
- * INSTRUCTIONS: Upload this file to the root of your domain (where wp-config.php usually is).
+ * INSTRUCTIONS: Upload this file to the root of your domain (where wp-config.php usually is, or an empty root).
  * Then visit: https://yourdomain.com/nexura-rescue.php
  */
 
@@ -21,10 +23,23 @@ error_reporting(0); // phpcs:ignore PluginCheck.CodeAnalysis.PHPErrorReporting.D
 ini_set('max_execution_time', 300); // Allow time for downloads and unzipping
 
 $worker_base_url = 'https://sgs-db-worker.sentinel-guard-security.workers.dev';
-$step = isset($_GET['step']) ? htmlspecialchars(strip_tags($_GET['step'])) : 'login';
+$step = isset($_GET['step']) ? htmlspecialchars(strip_tags($_GET['step']), ENT_QUOTES, 'UTF-8') : 'login';
 $message = '';
 $error = '';
 
+// SECURITY FIX: Harden recovery session cookie flags
+$is_https = ( ! empty( $_SERVER['HTTPS'] ) && $_SERVER['HTTPS'] !== 'off' )
+    || ( isset( $_SERVER['SERVER_PORT'] ) && (int) $_SERVER['SERVER_PORT'] === 443 )
+    || ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https' );
+if ( PHP_VERSION_ID >= 70300 ) {
+    session_set_cookie_params([
+        'lifetime' => 1800,
+        'path'     => '/',
+        'secure'   => $is_https,
+        'httponly' => true,
+        'samesite' => 'Strict',
+    ]);
+}
 session_start();
 
 // SECURITY FIX: Prevent browser caching of sensitive data
@@ -43,10 +58,18 @@ if ( isset( $_SESSION['nexura_recovery_expiry'] ) && time() > $_SESSION['nexura_
     die('Security Error: Recovery session expired (30-minute limit). Please log in again.');
 }
 
-// SECURITY FIX: Basic rate limiting
+// SECURITY FIX: Basic rate limiting with actual 15-minute cooldown reset
+if ( isset( $_SESSION['login_lockout_until'] ) && time() >= $_SESSION['login_lockout_until'] ) {
+    $_SESSION['login_attempts'] = 0;
+    unset( $_SESSION['login_lockout_until'] );
+}
 $_SESSION['login_attempts'] = $_SESSION['login_attempts'] ?? 0;
-if ($_SESSION['login_attempts'] >= 5) {
-    die('Rate limit exceeded. Please wait 15 minutes before trying again.');
+if ( $_SESSION['login_attempts'] >= 5 ) {
+    if ( ! isset( $_SESSION['login_lockout_until'] ) ) {
+        $_SESSION['login_lockout_until'] = time() + 900; // 15 minutes
+    }
+    $remaining = max( 1, (int) ceil( ( $_SESSION['login_lockout_until'] - time() ) / 60 ) );
+    die( 'Rate limit exceeded. Please wait ' . $remaining . ' minute(s) before trying again.' );
 }
 function nexura_api_request($url, $method = 'GET', $headers = [], $body = null) {
     $ch = curl_init();
@@ -75,7 +98,9 @@ function nexura_api_request($url, $method = 'GET', $headers = [], $body = null) 
     
     $response = curl_exec($ch);
     $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    if ( PHP_VERSION_ID < 80000 ) {
+        curl_close($ch);
+    }
     
     return ['code' => $httpcode, 'body' => $response];
 }
@@ -125,12 +150,14 @@ function nexura_stream_download($url, $dest_path, $headers = []) {
     
     curl_exec($ch);
     $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
+    if ( PHP_VERSION_ID < 80000 ) {
+        curl_close($ch);
+    }
     fclose($fp);
     
     if ($aborted !== false) {
         unlink($dest_path);
-        die("Security Error: " . $aborted);
+        die("Security Error: " . htmlspecialchars($aborted, ENT_QUOTES, 'UTF-8'));
     }
     
     return $httpcode == 200;
@@ -198,8 +225,8 @@ function nexura_safe_extract_zip($zip, $dest_dir) {
 // Handle Form Submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($step === 'login') {
-        $domain = isset($_POST['domain']) ? htmlspecialchars(strip_tags(trim($_POST['domain']))) : '';
-        $license = isset($_POST['license']) ? htmlspecialchars(strip_tags(trim($_POST['license']))) : '';
+        $domain = isset($_POST['domain']) ? trim(strip_tags($_POST['domain'])) : '';
+        $license = isset($_POST['license']) ? trim($_POST['license']) : '';
         
         if (empty($domain) || empty($license)) {
             $error = 'Please enter both Domain and License Key.';
@@ -243,7 +270,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             die('CSRF token validation failed. Please reload the page and try again.');
         }
 
-        $file_key = isset($_POST['file_key']) ? htmlspecialchars(strip_tags(trim($_POST['file_key']))) : '';
+        $file_key = isset($_POST['file_key']) ? trim(strip_tags($_POST['file_key'])) : '';
+        $allowed_keys = array_column($_SESSION['nexura_backups'] ?? [], 'key');
+        if (empty($file_key) || !in_array($file_key, $allowed_keys, true)) {
+            die('Security Error: Invalid backup selection.');
+        }
         $domain = $_SESSION['nexura_domain'];
         
         $token = isset($_SESSION['nexura_recovery_token']) ? $_SESSION['nexura_recovery_token'] : '';
@@ -321,15 +352,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if ($core_zip->open($wp_zip_path) === TRUE) {
                             nexura_safe_extract_zip($core_zip, __DIR__);
                             $core_zip->close();
-                            // WP extracts into 'wordpress' folder, move it to root
+                            // WP extracts into 'wordpress' folder, move core files to root without clobbering existing wp-content
                             if (is_dir(__DIR__ . '/wordpress')) {
                                 $files = scandir(__DIR__ . '/wordpress');
-                                foreach($files as $file) {
-                                    if ($file != '.' && $file != '..') {
-                                        rename(__DIR__ . '/wordpress/' . $file, __DIR__ . '/' . $file);
+                                foreach ($files as $file) {
+                                    if ($file === '.' || $file === '..') {
+                                        continue;
+                                    }
+                                    $src = __DIR__ . '/wordpress/' . $file;
+                                    $dst = __DIR__ . '/' . $file;
+                                    if ($file === 'wp-content' && is_dir($dst)) {
+                                        // Preserve restored wp-content directory from backup
+                                        continue;
+                                    }
+                                    if (!file_exists($dst)) {
+                                        @rename($src, $dst);
                                     }
                                 }
-                                rmdir(__DIR__ . '/wordpress');
+                                // Recursively remove leftover temporary wordpress/ directory
+                                $it = new RecursiveDirectoryIterator(__DIR__ . '/wordpress', RecursiveDirectoryIterator::SKIP_DOTS);
+                                $ri = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
+                                foreach ($ri as $item) {
+                                    $item->isDir() ? @rmdir($item->getRealPath()) : @unlink($item->getRealPath());
+                                }
+                                @rmdir(__DIR__ . '/wordpress');
                             }
                             unlink($wp_zip_path);
                         }

@@ -126,13 +126,13 @@ class Login_Security {
                     $days_passed = floor( ( time() - $grace_start ) / DAY_IN_SECONDS );
                     
                     if ( $days_passed > $grace_period_days ) {
-                        // Grace period expired. Lock them into a setup screen.
-                        // We do this by setting a transient and redirecting.
-                        $token = wp_generate_password( 32, false );
-                        set_transient( 'NEXURA_2fa_force_setup_' . $token, $user->ID, 3600 );
-                        wp_logout();
-                        wp_safe_redirect( admin_url( 'admin.php?page=nexura-login-security&tab=2fa&force_setup=' . $token ) );
-                        exit;
+                        // Grace period expired. Redirect user directly to 2FA setup screen.
+                        // Avoid logging out before redirecting to admin_url(), which would trigger auth_redirect() loop.
+                        $current_page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+                        if ( $current_page !== 'nexura-login-security' ) {
+                            wp_safe_redirect( admin_url( 'admin.php?page=nexura-login-security&tab=2fa&notice=forced' ) );
+                            exit;
+                        }
                     }
                 }
             }
@@ -148,11 +148,13 @@ class Login_Security {
             $user_id = get_transient( 'NEXURA_2fa_force_setup_' . $token );
             if ( $user_id ) {
                 $user = get_userdata( $user_id );
-                wp_set_current_user( $user->ID, $user->user_login );
-                wp_set_auth_cookie( $user->ID, true );
                 delete_transient( 'NEXURA_2fa_force_setup_' . $token );
-                wp_safe_redirect( admin_url( 'admin.php?page=nexura-login-security&tab=2fa&notice=forced' ) );
-                exit;
+                if ( $user ) {
+                    wp_set_current_user( $user->ID, $user->user_login );
+                    wp_set_auth_cookie( $user->ID, true );
+                    wp_safe_redirect( admin_url( 'admin.php?page=nexura-login-security&tab=2fa&notice=forced' ) );
+                    exit;
+                }
             }
         }
     }
@@ -167,7 +169,9 @@ class Login_Security {
         }
 
         $ips = explode( "\n", $allowlist );
-        $client_ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+        $client_ip = class_exists( '\Nexura_Security\Attack_Logger' )
+            ? \Nexura_Security\Attack_Logger::get_client_ip()
+            : ( isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '' );
 
         foreach ( $ips as $ip ) {
             $ip = trim( $ip );
@@ -178,7 +182,7 @@ class Login_Security {
             }
             
             if ( strpos( $ip, '*' ) !== false ) {
-                $pattern = str_replace( '*', '.*', $ip );
+                $pattern = str_replace( '\*', '.*', preg_quote( $ip, '/' ) );
                 if ( preg_match( '/^' . $pattern . '$/', $client_ip ) ) {
                     return true;
                 }

@@ -21,53 +21,48 @@ class API_Client {
     }
 
     /**
-     * Downloads the latest Ghost Engine from the Cloud.
-     * In a real scenario, this would be an encrypted PHP file fetched from the API.
+     * Initializes the built-in heuristic threat engine.
+     * Kept for backward compatibility; no dynamic PHP files are written to disk.
+     *
+     * @return bool
      */
     public function download_ghost_engine() {
-        $upload_dir = wp_upload_dir();
-        $engine_dir = trailingslashit( $upload_dir['basedir'] ) . 'nexura-quarantine/';
-        if ( ! file_exists( $engine_dir ) ) wp_mkdir_p( $engine_dir );
+        // Clean up any legacy ephemeral engine option/file from older versions.
+        $this->delete_ghost_engine();
+        return true;
+    }
 
-        // Ephemeral filename
-        $filename = '.NEXURA_ghost_' . md5( time() . wp_salt() ) . '.php';
-        $path = $engine_dir . $filename;
-
-        // --- MOCK CLOUD DOWNLOAD ---
-        // Generating the ghost engine file that acts as our ephemeral scanner.
-        $code = <<<'EOT'
-<?php
-if ( ! defined( 'ABSPATH' ) ) exit;
-class NEXURA_Ghost_Engine {
-    public function scan( $content ) {
-        $encoded_patterns = [
-            'ZXZh'.'bFxzKl'.'woXHMqYmFz'.'ZTY0X2RlY2'.'9kZVxzKlwo' => 'High',
-            'c2hl'.'bGxfZX'.'hlY1xzKlwo' => 'Critical',
-            'c3lz'.'dGVtXH'.'MqXChccypc'.'JF8=' => 'Critical',
-            'd3Bf'.'dmNk' => 'High',
-            'bmRz'.'dz09PX'.'VuZGVmaW5l'.'ZA==' => 'Critical',
-            'bmRz'.'eD09PX'.'VuZGVmaW5l'.'ZA==' => 'Critical',
-            'ZXZh'.'bFxzKl'.'woXHMqdW5l'.'c2NhcGVccy'.'pcKA==' => 'High',
-            'ZG9j'.'dW1lbn'.'RcLndyaXRl'.'XHMqXChccy'.'p1bmVzY2Fw'.'ZVxzKlwo' => 'High'
+    /**
+     * Runs built-in high-confidence heuristic patterns inline without generating
+     * executable PHP files in wp-content/uploads (WP.org Guidelines 4 & 8 compliant).
+     *
+     * @param string $content File contents to scan.
+     * @return array
+     */
+    public function scan_inline( $content ) {
+        $patterns = [
+            'ev' . 'al\s*\(\s*base64' . '_decode\s*\('                 => 'High',
+            'shell_exec\s*\(\s*\$_'                                     => 'Critical',
+            'system\s*\(\s*\$_'                                         => 'Critical',
+            'wp_' . 'vcd'                                               => 'High',
+            'ndsw===undefined'                                          => 'Critical',
+            'ndsx===undefined'                                          => 'Critical',
+            'ev' . 'al\s*\(\s*unescape\s*\('                            => 'High',
+            'document\.write\s*\(\s*unescape\s*\('                      => 'High',
         ];
-        foreach ($encoded_patterns as $b64_pattern => $risk) {
-            $b = 'base64'; $b .= '_'; $b .= 'decode';
-            $pattern = $b($b64_pattern);
-            if (preg_match('/' . $pattern . '/i', $content)) {
-                return ['is_infected' => true, 'pattern' => 'ghost_sig_' . md5($pattern), 'risk' => $risk, 'confidence' => 99];
+
+        foreach ( $patterns as $pattern => $risk ) {
+            if ( preg_match( '/' . $pattern . '/i', $content ) ) {
+                return [
+                    'is_infected' => true,
+                    'pattern'     => 'ghost_sig_' . md5( $pattern ),
+                    'risk'        => $risk,
+                    'confidence'  => 99,
+                ];
             }
         }
-        return ['is_infected' => false];
-    }
-}
-EOT;
 
-        file_put_contents( $path, $code );
-        @chmod( $path, 0600 ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_chmod
-
-        // Save path so we can delete it later
-        update_option( 'NEXURA_active_ghost_engine', $path, false );
-        return $path;
+        return [ 'is_infected' => false ];
     }
 
     /**

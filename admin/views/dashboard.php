@@ -486,9 +486,17 @@ $NEXURA_offset = $NEXURA_circumference - ( $NEXURA_score / 100 ) * $NEXURA_circu
 
                     countryCells.forEach(cell => {
                         const ip = cell.getAttribute('data-ip');
-                        if (countryMap[ip] && countryMap[ip].code) {
-                            const flagUrl = 'https://flagcdn.com/16x12/' + countryMap[ip].code.toLowerCase() + '.png';
-                            cell.innerHTML = '<img src="' + flagUrl + '" alt="' + countryMap[ip].code + '" style="margin-right: 6px; vertical-align: middle;"> ' + countryMap[ip].country;
+                        if (countryMap[ip] && countryMap[ip].code && /^[a-zA-Z]{2}$/.test(countryMap[ip].code)) {
+                            const code = countryMap[ip].code.toLowerCase();
+                            const flagUrl = 'https://flagcdn.com/16x12/' + code + '.png';
+                            cell.textContent = '';
+                            const img = document.createElement('img');
+                            img.src = flagUrl;
+                            img.alt = countryMap[ip].code.toUpperCase();
+                            img.style.marginRight = '6px';
+                            img.style.verticalAlign = 'middle';
+                            cell.appendChild(img);
+                            cell.appendChild(document.createTextNode(' ' + String(countryMap[ip].country || '')));
                         } else if (cell.textContent.trim() === 'Unknown (Pro)') {
                             cell.innerHTML = '<span style="color: #64748b; font-size: 12px; font-style: italic;">Unknown</span>';
                         }
